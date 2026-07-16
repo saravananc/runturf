@@ -39,10 +39,27 @@ Sign in with a seeded demo account (`demo` / `demo1234`) or register.
 On desktop, use the **Simulate** button on the Record screen to replay a
 realistic route without leaving your chair.
 
-## Tests
+## Mobile (Expo)
+
+`apps/mobile` is a standalone Expo app (own `node_modules`, not an npm workspace):
 
 ```bash
-npm test          # all workspaces
+cd apps/mobile
+npm install
+# Point the app at your machine's LAN IP so your phone can reach the API:
+#   set EXPO_PUBLIC_API_URL=http://<your-lan-ip>:4000   (defaults to the Android-emulator host 10.0.2.2)
+npx expo start
+```
+
+Scan the QR code with **Expo Go** on your phone. Login, live run recording with
+route polyline, and the territory overlay all hit the same API as the web app.
+
+## Tests & checks
+
+```bash
+npm test          # unit + API integration tests (needs the database up)
+npm run typecheck # all workspaces
+npm run lint      # eslint
 ```
 
 ## MVP scope

@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "RunTurf",
+    "slug": "runturf",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RunTurf uses your location to record runs and capture territory."
+      }
+    },
+    "android": {
+      "package": "com.runturf.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RunTurf uses your location to record runs and capture territory."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}

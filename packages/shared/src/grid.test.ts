@@ -83,7 +83,6 @@ describe('cellsOnPath', () => {
     const zoom = 18;
     const a = { lat: 13.05, lng: 80.25 };
     const cellA = latLngToCell(a, zoom);
-    const b = tileToLatLng(cellA.x + 5, cellA.y, zoom);
     const bMid = { lat: (cellToBBox({ x: cellA.x + 5, y: cellA.y }, zoom).south + cellToBBox({ x: cellA.x + 5, y: cellA.y }, zoom).north) / 2, lng: (cellToBBox({ x: cellA.x + 5, y: cellA.y }, zoom).west + cellToBBox({ x: cellA.x + 5, y: cellA.y }, zoom).east) / 2 };
     const cells = cellsOnPath([a, bMid], zoom);
     const keys = new Set(cells.map(cellKey));

@@ -46,7 +46,7 @@ export function MapView({ center = [80.2824, 13.0475], zoom = 15, onMap, classNa
       cleanup?.();
       map.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // center/zoom are initial values only; the map manages its own camera after mount
   }, []);
 
   return <div ref={containerRef} className={className ?? 'h-full w-full'} />;

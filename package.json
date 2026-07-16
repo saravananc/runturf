@@ -14,9 +14,17 @@
     "test": "npm run test -ws --if-present",
     "typecheck": "npm run typecheck -ws --if-present",
     "db:migrate": "npm run db:migrate -w apps/api",
-    "db:seed": "npm run db:seed -w apps/api"
+    "db:seed": "npm run db:seed -w apps/api",
+    "lint": "eslint .",
+    "format": "prettier --write \"{apps,packages}/**/*.{ts,tsx,css,json}\" \"*.{js,json,md}\""
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.5",
+    "typescript-eslint": "^8.64.0"
   }
 }

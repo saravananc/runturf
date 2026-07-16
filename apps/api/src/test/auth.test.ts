@@ -5,10 +5,12 @@ import { createApp } from '../app.js';
 import { pool } from '../db/client.js';
 
 const app = createApp();
-const uname = `t_${randomUUID().slice(0, 8)}`;
+const tag = randomUUID().slice(0, 8);
+const uname = `ta_${tag}`;
 
 afterAll(async () => {
-  await pool.query('DELETE FROM users WHERE username LIKE $1', ['t\\_%']);
+  // Only delete THIS file's users — other test files run in parallel.
+  await pool.query('DELETE FROM users WHERE username LIKE $1', [`ta\\_${tag}%`]);
   await pool.end();
 });
 
@@ -39,8 +41,11 @@ describe('auth flow', () => {
         .status,
     ).toBe(400);
     expect(
-      (await request(app).post('/auth/register').send({ username: 't_okname', password: 'short' }))
-        .status,
+      (
+        await request(app)
+          .post('/auth/register')
+          .send({ username: `ta_${tag}ok`, password: 'short' })
+      ).status,
     ).toBe(400);
   });
 
