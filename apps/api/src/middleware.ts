@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { ZodError, type ZodSchema } from 'zod';
+import { z, ZodError, type ZodSchema } from 'zod';
 import { HttpError, unauthorized } from './errors.js';
 import { logger } from './logger.js';
 import { verifyAccessToken } from './services/auth.js';
@@ -32,6 +32,13 @@ export function h(
 
 export function parseBody<T>(schema: ZodSchema<T>, body: unknown): T {
   return schema.parse(body);
+}
+
+const Uuid = z.string().uuid();
+
+/** Validates and returns a UUID route param (Express 5 types params loosely). */
+export function idParam(value: unknown): string {
+  return Uuid.parse(value);
 }
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {

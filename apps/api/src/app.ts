@@ -3,6 +3,13 @@ import express from 'express';
 import { config } from './config.js';
 import { errorHandler } from './middleware.js';
 import { authRouter } from './routes/auth.js';
+import {
+  achievementsRouter,
+  challengesRouter,
+  myAchievementsRouter,
+} from './routes/gamification.js';
+import { runsRouter } from './routes/runs.js';
+import { territoryRouter } from './routes/territory.js';
 import { usersRouter } from './routes/users.js';
 
 export function createApp() {
@@ -16,6 +23,11 @@ export function createApp() {
 
   app.use('/auth', authRouter);
   app.use('/users', usersRouter);
+  app.use('/users/me/achievements', myAchievementsRouter);
+  app.use('/runs', runsRouter);
+  app.use('/territory', territoryRouter);
+  app.use('/achievements', achievementsRouter);
+  app.use('/challenges', challengesRouter);
 
   app.use(errorHandler);
   return app;
