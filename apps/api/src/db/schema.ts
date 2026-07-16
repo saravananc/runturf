@@ -1,0 +1,157 @@
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  username: text('username').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  color: text('color').notNull().default('#22c55e'),
+  role: text('role').notNull().default('user'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const refreshTokens = pgTable('refresh_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const userStats = pgTable('user_stats', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  xp: integer('xp').notNull().default(0),
+  level: integer('level').notNull().default(1),
+  coins: integer('coins').notNull().default(0),
+  streakDays: integer('streak_days').notNull().default(0),
+  lastRunDate: text('last_run_date'), // YYYY-MM-DD in user-local terms (UTC for MVP)
+  totalRuns: integer('total_runs').notNull().default(0),
+  totalDistanceM: doublePrecision('total_distance_m').notNull().default(0),
+});
+
+export const runs = pgTable(
+  'runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    durationS: integer('duration_s').notNull(),
+    distanceM: doublePrecision('distance_m').notNull(),
+    avgPaceSPerKm: doublePrecision('avg_pace_s_per_km'),
+    cellsCaptured: integer('cells_captured').notNull().default(0),
+    cellsStolen: integer('cells_stolen').notNull().default(0),
+    xpGained: integer('xp_gained').notNull().default(0),
+    rawPoints: jsonb('raw_points').notNull(), // TrackPoint[]
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('runs_user_started_idx').on(t.userId, t.startedAt)],
+);
+
+export const territoryCells = pgTable(
+  'territory_cells',
+  {
+    zoom: integer('zoom').notNull(),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull().defaultNow(),
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.zoom, t.x, t.y] }),
+    index('territory_owner_idx').on(t.ownerId),
+    index('territory_xy_idx').on(t.x, t.y),
+  ],
+);
+
+export const cellCaptures = pgTable(
+  'cell_captures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    zoom: integer('zoom').notNull(),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+    newOwnerId: uuid('new_owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    prevOwnerId: uuid('prev_owner_id').references(() => users.id, { onDelete: 'set null' }),
+    runId: uuid('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('captures_cell_idx').on(t.zoom, t.x, t.y)],
+);
+
+export const achievements = pgTable('achievements', {
+  code: text('code').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').notNull().default('🏅'),
+  xpReward: integer('xp_reward').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+export const userAchievements = pgTable(
+  'user_achievements',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    code: text('code')
+      .notNull()
+      .references(() => achievements.code, { onDelete: 'cascade' }),
+    unlockedAt: timestamp('unlocked_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.code] })],
+);
+
+export const challenges = pgTable('challenges', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  metric: text('metric').notNull(), // 'distance_m' | 'cells_captured'
+  target: doublePrecision('target').notNull(),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  coinReward: integer('coin_reward').notNull().default(0),
+  xpReward: integer('xp_reward').notNull().default(0),
+});
+
+export const challengeParticipants = pgTable(
+  'challenge_participants',
+  {
+    challengeId: uuid('challenge_id')
+      .notNull()
+      .references(() => challenges.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    progress: doublePrecision('progress').notNull().default(0),
+    completed: boolean('completed').notNull().default(false),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.challengeId, t.userId] }),
+    uniqueIndex('challenge_user_idx').on(t.challengeId, t.userId),
+  ],
+);

@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: runturf_dev
       POSTGRES_DB: runturf
     ports:
-      - "5432:5432"
+      # 5433 on the host: a native PostgreSQL service already owns 5432 on this machine
+      - "5433:5432"
     volumes:
       - runturf_pgdata:/var/lib/postgresql/data
     healthcheck:
