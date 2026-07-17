@@ -1,4 +1,5 @@
 import { MapView } from '../components/MapView';
+import { FlagIcon } from '../components/icons';
 import { useTerritoryOverlay } from '../territory/useTerritoryOverlay';
 
 export function MapPage() {
@@ -7,9 +8,14 @@ export function MapPage() {
   return (
     <div className="relative h-full">
       <MapView onMap={attach} />
-      <div className="pointer-events-none absolute top-3 left-3 rounded-xl bg-slate-900/85 px-4 py-2 backdrop-blur">
-        <div className="text-sm font-bold text-white">Territory map</div>
-        <div className="text-xs text-slate-400">Cells captured by runners appear here</div>
+      <div className="glass pointer-events-none absolute top-3 left-3 flex items-center gap-2.5 px-3.5 py-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-volt/15 text-volt">
+          <FlagIcon size={17} />
+        </span>
+        <div>
+          <div className="text-[13.5px] font-bold text-ink">Territory map</div>
+          <div className="text-[11.5px] text-ink-2">Run through a cell to claim it</div>
+        </div>
       </div>
     </div>
   );

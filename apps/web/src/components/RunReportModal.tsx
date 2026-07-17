@@ -1,56 +1,94 @@
-import type { RunReport } from '@runturf/shared';
+import { levelProgress, type RunReport } from '@runturf/shared';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
+import { CoinIcon, FlagIcon, SwordsIcon } from './icons';
+import { CountUp, ProgressRing } from './ui';
 
 export function RunReportModal({ report, onClose }: { report: RunReport; onClose: () => void }) {
-  const { run } = report;
+  const { run, stats } = report;
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-        <h2 className="text-center text-2xl font-bold text-white">Run complete! 🎉</h2>
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
+      <div className="card-raised anim-pop w-full max-w-sm p-6">
+        <p className="t-label text-center">Run complete</p>
 
-        <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-          <Stat label="Distance" value={formatDistance(run.distanceM)} />
-          <Stat label="Time" value={formatDuration(run.durationS)} />
-          <Stat label="Pace" value={formatPace(run.avgPaceSPerKm)} />
+        {/* Hero: distance inside the ring; ring shows progress toward next level */}
+        <div className="mt-4 flex justify-center">
+          <ProgressRing
+            progress={levelProgress(stats.xp).progress}
+            size={150}
+            stroke={10}
+            label={`Level ${stats.level} progress`}
+          >
+            <span className="t-display text-[26px] text-ink">{formatDistance(run.distanceM)}</span>
+            <span className="mt-0.5 text-[11.5px] font-semibold text-ink-2">
+              Lv {stats.level} · <CountUp to={report.xpGained} prefix="+" /> XP
+            </span>
+          </ProgressRing>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-          <Stat label="Captured" value={`${run.cellsCaptured} 🚩`} accent />
-          <Stat label="Stolen" value={`${run.cellsStolen} ⚔️`} accent />
-          <Stat label="XP" value={`+${report.xpGained}`} accent />
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <Cell label="Time" value={formatDuration(run.durationS)} delay={0.1} />
+          <Cell label="Pace" value={formatPace(run.avgPaceSPerKm)} delay={0.18} />
+          <Cell
+            label="Coins"
+            value={
+              <span className="inline-flex items-center gap-1 text-gold">
+                <CoinIcon size={15} /> +{report.coinsGained}
+              </span>
+            }
+            delay={0.26}
+          />
+          <Cell
+            label="Captured"
+            value={
+              <span className="inline-flex items-center gap-1 text-volt">
+                <FlagIcon size={15} /> {run.cellsCaptured}
+              </span>
+            }
+            delay={0.34}
+          />
+          <Cell
+            label="Stolen"
+            value={
+              <span className="inline-flex items-center gap-1 text-ember">
+                <SwordsIcon size={15} /> {run.cellsStolen}
+              </span>
+            }
+            delay={0.42}
+          />
+          <Cell label="Streak" value={`${stats.streakDays}d 🔥`} delay={0.5} />
         </div>
-
-        {report.coinsGained > 0 && (
-          <p className="mt-3 text-center text-amber-300">+{report.coinsGained} coins 🪙</p>
-        )}
 
         {report.personalBests.length > 0 && (
-          <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-center text-sm text-emerald-300">
-            🏅 New personal best: {report.personalBests.join(', ')}
+          <div
+            className="anim-rise mt-4 rounded-xl bg-volt/10 px-4 py-2.5 text-center text-[13px] font-bold text-volt"
+            style={{ animationDelay: '0.55s' }}
+          >
+            🏅 New personal best — {report.personalBests.join(', ')}
           </div>
         )}
 
         {report.newAchievements.length > 0 && (
           <div className="mt-4 space-y-2">
-            {report.newAchievements.map((a) => (
+            {report.newAchievements.map((a, i) => (
               <div
                 key={a.code}
-                className="flex items-center gap-3 rounded-lg bg-amber-500/10 p-3 text-sm"
+                className="anim-rise flex items-center gap-3 rounded-xl border border-gold/25 bg-gold/8 p-3"
+                style={{ animationDelay: `${0.6 + i * 0.12}s` }}
               >
-                <span className="text-2xl">{a.icon}</span>
-                <div>
-                  <div className="font-semibold text-amber-300">{a.title}</div>
-                  <div className="text-xs text-slate-400">{a.description}</div>
+                <span className="text-2xl" aria-hidden="true">
+                  {a.icon}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-bold text-gold">{a.title}</div>
+                  <div className="truncate text-xs text-ink-2">{a.description}</div>
                 </div>
+                <span className="ml-auto text-xs font-bold text-ink-2">+{a.xpReward}</span>
               </div>
             ))}
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          className="mt-6 w-full rounded-lg bg-emerald-500 py-2.5 font-semibold text-slate-900 hover:bg-emerald-400"
-        >
+        <button onClick={onClose} className="btn btn-primary mt-6 w-full py-3">
           Nice!
         </button>
       </div>
@@ -58,13 +96,22 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Cell({
+  label,
+  value,
+  delay,
+}: {
+  label: string;
+  value: React.ReactNode;
+  delay: number;
+}) {
   return (
-    <div className="rounded-lg bg-slate-800 p-2">
-      <div className="text-[10px] tracking-wide text-slate-400 uppercase">{label}</div>
-      <div className={`text-sm font-bold tabular-nums ${accent ? 'text-emerald-300' : 'text-white'}`}>
-        {value}
-      </div>
+    <div
+      className="anim-rise rounded-xl bg-elev2 px-2 py-2.5 text-center"
+      style={{ animationDelay: `${delay}s` }}
+    >
+      <div className="t-label">{label}</div>
+      <div className="mt-0.5 text-[14.5px] font-bold text-ink tabular-nums">{value}</div>
     </div>
   );
 }

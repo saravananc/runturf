@@ -2,6 +2,7 @@ import type { FriendEntry, FriendRequest, UserPublic } from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { del, get, post } from '../api/client';
+import { Avatar, SectionHeading } from '../components/ui';
 import { formatDistance } from '../record/recorder';
 
 export function FriendsTab() {
@@ -54,7 +55,7 @@ export function FriendsTab() {
     <div className="space-y-6">
       <div>
         <input
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-slate-100 outline-none focus:border-emerald-400"
+          className="input"
           placeholder="Find runners by name…"
           value={query}
           onChange={(e) => {
@@ -62,15 +63,17 @@ export function FriendsTab() {
             setNotice('');
           }}
         />
-        {notice && <p className="mt-2 text-sm text-emerald-300">{notice}</p>}
+        {notice && (
+          <p className="anim-rise mt-2 text-[12.5px] font-semibold text-volt">{notice}</p>
+        )}
         {results.data && results.data.length > 0 && (
-          <div className="mt-2 space-y-2">
+          <div className="mt-2.5 space-y-2">
             {results.data.map((u) => (
               <Row key={u.id} user={u}>
                 <button
                   onClick={() => sendRequest.mutate(u.username)}
                   disabled={sendRequest.isPending}
-                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-emerald-400 disabled:opacity-50"
+                  className="btn btn-primary px-3.5 py-1.5 text-[12.5px]"
                 >
                   Add friend
                 </button>
@@ -79,25 +82,25 @@ export function FriendsTab() {
           </div>
         )}
         {results.data?.length === 0 && (
-          <p className="mt-2 text-sm text-slate-400">No runners match “{query}”.</p>
+          <p className="mt-2 text-[12.5px] text-ink-3">No runners match “{query}”.</p>
         )}
       </div>
 
       {incoming.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold text-white">Requests</h2>
+          <SectionHeading>Requests</SectionHeading>
           <div className="space-y-2">
             {incoming.map((r) => (
-              <Row key={r.id} user={r.user}>
+              <Row key={r.id} user={r.user} highlight>
                 <button
                   onClick={() => respond.mutate({ id: r.id, action: 'accept' })}
-                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-emerald-400"
+                  className="btn btn-primary px-3.5 py-1.5 text-[12.5px]"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => respond.mutate({ id: r.id, action: 'decline' })}
-                  className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-600"
+                  className="btn btn-ghost px-3 py-1.5 text-[12.5px]"
                 >
                   Decline
                 </button>
@@ -108,16 +111,28 @@ export function FriendsTab() {
       )}
 
       <section>
-        <h2 className="mb-2 font-bold text-white">Friends ({friends.data?.length ?? 0})</h2>
+        <SectionHeading
+          action={
+            <span className="text-[12px] font-semibold text-ink-3">
+              {friends.data?.length ?? 0}
+            </span>
+          }
+        >
+          Friends
+        </SectionHeading>
         <div className="space-y-2">
           {friends.data?.length === 0 && (
-            <p className="text-sm text-slate-400">No friends yet — search above to add some.</p>
+            <p className="text-[12.5px] text-ink-3">No friends yet — search above to add some.</p>
           )}
           {friends.data?.map((f) => (
-            <Row key={f.user.id} user={f.user} sub={`Lv ${f.level} · ${f.cellsOwned} 🚩 · ${formatDistance(f.totalDistanceM)} total`}>
+            <Row
+              key={f.user.id}
+              user={f.user}
+              sub={`Lv ${f.level} · ${f.cellsOwned} cells · ${formatDistance(f.totalDistanceM)} total`}
+            >
               <button
                 onClick={() => unfriend.mutate(f.user.id)}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-red-500/30 hover:text-red-300"
+                className="btn btn-danger-soft px-3 py-1.5 text-[12px]"
               >
                 Remove
               </button>
@@ -128,7 +143,7 @@ export function FriendsTab() {
 
       {outgoing.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold text-white">Sent</h2>
+          <SectionHeading>Sent</SectionHeading>
           <div className="space-y-2">
             {outgoing.map((r) => (
               <Row key={r.id} user={r.user} sub="Pending…" />
@@ -143,23 +158,22 @@ export function FriendsTab() {
 function Row({
   user,
   sub,
+  highlight,
   children,
 }: {
   user: UserPublic;
   sub?: string;
+  highlight?: boolean;
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-slate-900"
-        style={{ backgroundColor: user.color }}
-      >
-        {user.displayName.slice(0, 1).toUpperCase()}
-      </div>
+    <div
+      className={`card flex items-center gap-3 p-3 ${highlight ? 'border-volt/30 bg-volt/5' : ''}`}
+    >
+      <Avatar user={user} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold text-white">{user.displayName}</div>
-        <div className="truncate text-xs text-slate-400">{sub ?? `@${user.username}`}</div>
+        <div className="truncate text-[13.5px] font-bold text-ink">{user.displayName}</div>
+        <div className="truncate text-[11.5px] text-ink-3">{sub ?? `@${user.username}`}</div>
       </div>
       {children}
     </div>

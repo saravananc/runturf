@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { post } from '../api/client';
 import { MapView } from '../components/MapView';
 import { RunReportModal } from '../components/RunReportModal';
+import { FlaskIcon, PauseIcon, PlayIcon, StopIcon } from '../components/icons';
 import {
   formatDistance,
   formatDuration,
@@ -42,10 +43,16 @@ export function RecordPage() {
       data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
     });
     m.addLayer({
+      id: 'route-glow',
+      type: 'line',
+      source: 'route',
+      paint: { 'line-color': '#adeb2e', 'line-width': 10, 'line-opacity': 0.18, 'line-blur': 4 },
+    });
+    m.addLayer({
       id: 'route-line',
       type: 'line',
       source: 'route',
-      paint: { 'line-color': '#34d399', 'line-width': 4, 'line-opacity': 0.9 },
+      paint: { 'line-color': '#adeb2e', 'line-width': 4, 'line-opacity': 0.95 },
     });
     navigator.geolocation?.getCurrentPosition(
       (pos) => m.jumpTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 16 }),
@@ -96,40 +103,58 @@ export function RecordPage() {
 
   const livePace =
     rec.distanceM >= 50 && rec.elapsedS > 0 ? rec.elapsedS / (rec.distanceM / 1000) : null;
+  const active = rec.status === 'recording' || rec.status === 'paused';
 
   return (
     <div className="relative h-full">
       <MapView onMap={onMap} />
 
       {/* HUD */}
-      <div className="pointer-events-none absolute top-3 left-1/2 flex -translate-x-1/2 gap-3 rounded-2xl bg-slate-900/85 px-5 py-3 backdrop-blur">
-        <Hud label="Distance" value={formatDistance(rec.distanceM)} />
-        <Hud label="Time" value={formatDuration(rec.elapsedS)} />
-        <Hud label="Pace" value={formatPace(livePace)} />
+      <div className="glass absolute top-3 left-1/2 -translate-x-1/2 px-5 py-3">
+        <div className="flex items-center gap-6">
+          <Hud label="Distance" value={formatDistance(rec.distanceM)} primary />
+          <div className="h-9 w-px bg-white/10" />
+          <Hud label="Time" value={formatDuration(rec.elapsedS)} />
+          <div className="h-9 w-px bg-white/10" />
+          <Hud label="Pace" value={formatPace(livePace)} />
+        </div>
+        {active && (
+          <div className="mt-1.5 flex items-center justify-center gap-1.5">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                rec.status === 'recording' ? 'rec-dot bg-ember' : 'bg-gold'
+              }`}
+            />
+            <span className="t-label">
+              {rec.status === 'recording' ? 'Recording' : 'Paused'}
+            </span>
+          </div>
+        )}
       </div>
 
       {error && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 rounded-lg bg-red-500/90 px-4 py-2 text-sm text-white">
+        <div
+          role="alert"
+          className="anim-rise absolute top-28 left-1/2 -translate-x-1/2 rounded-xl bg-ember px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
+        >
           {error}
         </div>
       )}
 
       {/* Controls */}
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-3">
-        {rec.status === 'idle' || rec.status === 'finished' ? (
+        {!active ? (
           <>
-            <button
-              onClick={startGps}
-              className="rounded-full bg-emerald-500 px-8 py-4 text-lg font-bold text-slate-900 shadow-lg hover:bg-emerald-400"
-            >
-              ▶ Start run
+            <button onClick={startGps} className="btn btn-primary rounded-full px-9 py-4 text-lg">
+              <PlayIcon size={20} /> Start run
             </button>
             <button
               onClick={startSim}
               title="Replay a synthetic route (for desktop testing)"
-              className="rounded-full bg-slate-700 px-4 py-4 text-sm font-semibold text-slate-200 shadow-lg hover:bg-slate-600"
+              className="btn btn-ghost rounded-full p-4"
+              aria-label="Simulate a run"
             >
-              🧪 Simulate
+              <FlaskIcon size={20} />
             </button>
           </>
         ) : (
@@ -137,24 +162,21 @@ export function RecordPage() {
             {rec.status === 'recording' ? (
               <button
                 onClick={rec.pause}
-                className="rounded-full bg-amber-400 px-6 py-4 font-bold text-slate-900 shadow-lg"
+                className="btn rounded-full bg-gold px-6 py-4 text-[#0a0f1e]"
               >
-                ⏸ Pause
+                <PauseIcon size={19} /> Pause
               </button>
             ) : (
-              <button
-                onClick={rec.resume}
-                className="rounded-full bg-emerald-500 px-6 py-4 font-bold text-slate-900 shadow-lg"
-              >
-                ▶ Resume
+              <button onClick={rec.resume} className="btn btn-primary rounded-full px-6 py-4">
+                <PlayIcon size={19} /> Resume
               </button>
             )}
             <button
               onClick={finish}
               disabled={submitting}
-              className="rounded-full bg-red-500 px-6 py-4 font-bold text-white shadow-lg disabled:opacity-50"
+              className="btn btn-danger rounded-full px-6 py-4"
             >
-              {submitting ? 'Saving…' : '⏹ Finish'}
+              <StopIcon size={19} /> {submitting ? 'Saving…' : 'Finish'}
             </button>
           </>
         )}
@@ -173,11 +195,17 @@ export function RecordPage() {
   );
 }
 
-function Hud({ label, value }: { label: string; value: string }) {
+function Hud({ label, value, primary }: { label: string; value: string; primary?: boolean }) {
   return (
     <div className="text-center">
-      <div className="text-[10px] tracking-wide text-slate-400 uppercase">{label}</div>
-      <div className="text-lg font-bold text-white tabular-nums">{value}</div>
+      <div className="t-label">{label}</div>
+      <div
+        className={`font-extrabold tracking-tight tabular-nums ${
+          primary ? 'text-[22px] text-volt' : 'text-lg text-ink'
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

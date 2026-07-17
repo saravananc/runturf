@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import maplibregl from 'maplibre-gl';
 import { get, getBlob } from '../api/client';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
+import { DownloadIcon, FlagIcon } from './icons';
 import { MapView } from './MapView';
 
 type RunDetail = RunSummary & { points: RunPointInput[] };
@@ -26,13 +27,23 @@ export function RunDetailModal({
     const coords = run.points.map((p) => [p.lng, p.lat] as [number, number]);
     map.addSource('route', {
       type: 'geojson',
-      data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: coords },
+      },
+    });
+    map.addLayer({
+      id: 'route-glow',
+      type: 'line',
+      source: 'route',
+      paint: { 'line-color': '#adeb2e', 'line-width': 10, 'line-opacity': 0.18, 'line-blur': 4 },
     });
     map.addLayer({
       id: 'route-line',
       type: 'line',
       source: 'route',
-      paint: { 'line-color': '#34d399', 'line-width': 4 },
+      paint: { 'line-color': '#adeb2e', 'line-width': 4 },
     });
     const bounds = coords.reduce(
       (b, c) => b.extend(c),
@@ -42,39 +53,39 @@ export function RunDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-      <div className="flex max-h-full w-full max-w-md flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-        <div className="h-64 overflow-hidden rounded-t-2xl">
-          {run && <MapView onMap={onMap} />}
-        </div>
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
+      <div className="card-raised anim-pop flex max-h-full w-full max-w-md flex-col overflow-hidden">
+        <div className="h-64">{run && <MapView onMap={onMap} />}</div>
         <div className="p-4">
           {run && (
-            <div className="flex gap-4 text-sm text-slate-200">
-              <span>{formatDistance(run.distanceM)}</span>
-              <span>{formatDuration(run.durationS)}</span>
-              <span>{formatPace(run.avgPaceSPerKm)}</span>
-              <span className="ml-auto">🚩 {run.cellsCaptured}</span>
+            <div className="flex items-baseline gap-4">
+              <span className="text-[22px] font-extrabold tracking-tight text-ink tabular-nums">
+                {formatDistance(run.distanceM)}
+              </span>
+              <span className="text-[13px] text-ink-2">{formatDuration(run.durationS)}</span>
+              <span className="text-[13px] text-ink-2">{formatPace(run.avgPaceSPerKm)}</span>
+              <span className="ml-auto inline-flex items-center gap-1 text-[13px] font-bold text-volt">
+                <FlagIcon size={14} /> {run.cellsCaptured}
+              </span>
             </div>
           )}
           <div className="mt-4 flex gap-2">
-            <button
-              onClick={onClose}
-              className="flex-1 rounded-lg bg-slate-700 py-2 font-semibold text-white hover:bg-slate-600"
-            >
+            <button onClick={onClose} className="btn btn-ghost flex-1 py-2.5">
               Close
             </button>
             <button
               onClick={() => downloadGpx(runId)}
-              className="rounded-lg bg-sky-500/20 px-4 py-2 font-semibold text-sky-300 hover:bg-sky-500/30"
+              className="btn btn-ghost px-4 py-2.5 text-skyx"
+              aria-label="Download GPX"
             >
-              GPX ↓
+              <DownloadIcon size={17} /> GPX
             </button>
             <button
               onClick={async () => {
                 await onDelete(runId);
                 onClose();
               }}
-              className="rounded-lg bg-red-500/20 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/30"
+              className="btn btn-danger-soft px-4 py-2.5"
             >
               Delete
             </button>

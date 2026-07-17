@@ -1,9 +1,11 @@
-import type { UnlockedAchievement, UserStats } from '@runturf/shared';
+import type { AchievementDef, UnlockedAchievement, UserStats } from '@runturf/shared';
 import { levelProgress } from '@runturf/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { get } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { CoinIcon, FlagIcon, FlameIcon, RouteIcon, TargetIcon } from '../components/icons';
+import { Avatar, ProgressRing, SectionHeading, StatTile } from '../components/ui';
 import { formatDistance } from '../record/recorder';
 
 export function ProfilePage() {
@@ -16,93 +18,110 @@ export function ProfilePage() {
     queryKey: ['myAchievements'],
     queryFn: () => get<UnlockedAchievement[]>('/users/me/achievements'),
   });
+  const { data: catalog } = useQuery({
+    queryKey: ['achievementCatalog'],
+    queryFn: () => get<AchievementDef[]>('/achievements'),
+  });
 
   const lp = stats ? levelProgress(stats.xp) : null;
+  const unlockedCodes = new Set(unlocked?.map((a) => a.code));
 
   return (
-    <div className="h-full overflow-y-auto p-4 pb-8">
-      <div className="flex items-center gap-4">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-slate-900"
-          style={{ backgroundColor: user?.color }}
-        >
-          {user?.displayName.slice(0, 1).toUpperCase()}
+    <div className="mx-auto h-full w-full max-w-lg overflow-y-auto p-4 pb-8">
+      <div className="flex items-center gap-3.5">
+        {user && <Avatar user={user} size={56} ring />}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[19px] font-extrabold text-ink">{user?.displayName}</h1>
+          <p className="text-[12.5px] text-ink-2">@{user?.username}</p>
         </div>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-white">{user?.displayName}</h1>
-          <p className="text-sm text-slate-400">@{user?.username}</p>
-        </div>
-        <button
-          onClick={logout}
-          className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-600"
-        >
+        <button onClick={logout} className="btn btn-ghost px-3.5 py-2 text-[12.5px]">
           Sign out
         </button>
       </div>
 
       {stats && lp && (
         <>
-          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/60 p-4">
-            <div className="flex items-baseline justify-between">
-              <span className="text-lg font-bold text-white">Level {lp.level}</span>
-              <span className="text-xs text-slate-400">
-                {stats.xp - lp.currentLevelXp} / {lp.nextLevelXp - lp.currentLevelXp} XP
-              </span>
-            </div>
-            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-700">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
-                style={{ width: `${Math.round(lp.progress * 100)}%` }}
-              />
-            </div>
-            <div className="mt-3 flex justify-between text-sm">
-              <span className="text-amber-300">🪙 {stats.coins} coins</span>
-              <span className="text-orange-300">🔥 {stats.streakDays}-day streak</span>
+          {/* Level hero */}
+          <div className="card anim-rise mt-5 flex items-center gap-5 p-5">
+            <ProgressRing progress={lp.progress} size={116} stroke={10} label={`Level ${lp.level}`}>
+              <span className="t-label">Level</span>
+              <span className="t-display text-[30px] text-volt">{lp.level}</span>
+            </ProgressRing>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-bold text-ink">
+                {stats.xp - lp.currentLevelXp}
+                <span className="font-medium text-ink-3">
+                  {' '}
+                  / {lp.nextLevelXp - lp.currentLevelXp} XP to Lv {lp.level + 1}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-col gap-2 text-[13px] font-semibold">
+                <span className="inline-flex items-center gap-1.5 text-gold">
+                  <CoinIcon size={15} /> {stats.coins} coins
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-ember">
+                  <FlameIcon size={15} /> {stats.streakDays}-day streak
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <Card label="Runs" value={String(stats.totalRuns)} />
-            <Card label="Distance" value={formatDistance(stats.totalDistanceM)} />
-            <Card label="Turf" value={`${stats.cellsOwned} 🚩`} />
+          <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+            <StatTile label="Runs" value={stats.totalRuns} icon={<RouteIcon size={13} />} tone="volt" />
+            <StatTile label="Distance" value={formatDistance(stats.totalDistanceM)} tone="volt" />
+            <StatTile label="Turf" value={stats.cellsOwned} icon={<FlagIcon size={13} />} tone="volt" />
           </div>
         </>
       )}
 
-      <Link
-        to="/challenges"
-        className="mt-4 block rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500"
-      >
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-white">🎯 Weekly challenges</span>
-          <span className="text-slate-400">→</span>
-        </div>
+      <Link to="/challenges" className="card mt-2.5 flex items-center gap-3 p-4 transition-colors hover:bg-elev2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-grape/15 text-grape">
+          <TargetIcon size={18} />
+        </span>
+        <span className="flex-1 text-[14px] font-bold text-ink">Weekly challenges</span>
+        <span className="text-ink-3">→</span>
       </Link>
 
-      <h2 className="mt-6 text-lg font-bold text-white">Badges</h2>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        {unlocked?.map((a) => (
-          <div key={a.code} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-            <div className="text-2xl">{a.icon}</div>
-            <div className="mt-1 text-sm font-semibold text-amber-200">{a.title}</div>
-            <div className="text-xs text-slate-400">{a.description}</div>
-          </div>
-        ))}
-        {unlocked?.length === 0 && (
-          <p className="col-span-2 py-6 text-center text-sm text-slate-400">
-            No badges yet — go run!
-          </p>
-        )}
+      <div className="mt-6">
+        <SectionHeading
+          action={
+            <span className="text-[12px] font-semibold text-ink-3">
+              {unlockedCodes.size}/{catalog?.length ?? '–'}
+            </span>
+          }
+        >
+          Badges
+        </SectionHeading>
+        <div className="grid grid-cols-3 gap-2.5">
+          {catalog?.map((a, i) => {
+            const isUnlocked = unlockedCodes.has(a.code);
+            return (
+              <div
+                key={a.code}
+                className={`anim-rise flex flex-col items-center gap-1 rounded-2xl border p-3 text-center ${
+                  isUnlocked
+                    ? 'border-gold/25 bg-gold/8'
+                    : 'border-white/6 bg-elev1 opacity-45 grayscale'
+                }`}
+                style={{ animationDelay: `${Math.min(i * 0.03, 0.3)}s` }}
+                title={a.description}
+              >
+                <span className="text-[26px]" aria-hidden="true">
+                  {a.icon}
+                </span>
+                <span
+                  className={`text-[11.5px] leading-tight font-bold ${
+                    isUnlocked ? 'text-gold' : 'text-ink-2'
+                  }`}
+                >
+                  {a.title}
+                </span>
+                <span className="text-[9.5px] leading-snug text-ink-3">{a.description}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
-}
-
-function Card({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-3">
-      <div className="text-[10px] tracking-wide text-slate-400 uppercase">{label}</div>
-      <div className="mt-1 text-lg font-bold text-white">{value}</div>
     </div>
   );
 }

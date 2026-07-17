@@ -1,12 +1,20 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import {
+  HistoryIcon,
+  MapIcon,
+  RecordIcon,
+  TrophyIcon,
+  UserIcon,
+  UsersIcon,
+} from './icons';
 
 const tabs = [
-  { to: '/', label: 'Map', icon: '🗺️' },
-  { to: '/record', label: 'Record', icon: '⏺️' },
-  { to: '/social', label: 'Social', icon: '👥' },
-  { to: '/history', label: 'History', icon: '📜' },
-  { to: '/leaderboard', label: 'Rank', icon: '🏆' },
-  { to: '/profile', label: 'Profile', icon: '👤' },
+  { to: '/', label: 'Map', Icon: MapIcon },
+  { to: '/record', label: 'Record', Icon: RecordIcon },
+  { to: '/social', label: 'Social', Icon: UsersIcon },
+  { to: '/history', label: 'History', Icon: HistoryIcon },
+  { to: '/leaderboard', label: 'Rank', Icon: TrophyIcon },
+  { to: '/profile', label: 'Profile', Icon: UserIcon },
 ];
 
 export function Layout() {
@@ -15,20 +23,32 @@ export function Layout() {
       <main className="min-h-0 flex-1">
         <Outlet />
       </main>
-      <nav className="flex shrink-0 border-t border-slate-700 bg-slate-900/95 pb-[env(safe-area-inset-bottom)]">
-        {tabs.map((t) => (
+      <nav
+        className="flex shrink-0 border-t border-white/8 bg-base/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+        aria-label="Primary"
+      >
+        {tabs.map(({ to, label, Icon }) => (
           <NavLink
-            key={t.to}
-            to={t.to}
-            end={t.to === '/'}
+            key={to}
+            to={to}
+            end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs ${
-                isActive ? 'text-emerald-400' : 'text-slate-400'
+              `group relative flex flex-1 flex-col items-center gap-1 pt-2.5 pb-2 text-[10.5px] font-semibold tracking-wide transition-colors ${
+                isActive ? 'text-volt' : 'text-ink-3 hover:text-ink-2'
               }`
             }
           >
-            <span className="text-lg leading-none">{t.icon}</span>
-            {t.label}
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`absolute top-0 h-0.5 w-8 rounded-full bg-volt transition-opacity ${
+                    isActive ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+                <Icon size={21} strokeWidth={isActive ? 2.4 : 2} />
+                {label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

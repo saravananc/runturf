@@ -2,7 +2,11 @@ import type { LeaderboardEntry } from '@runturf/shared';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { FlagIcon, TrophyIcon } from '../components/icons';
+import { Avatar, EmptyState } from '../components/ui';
 import { formatDistance } from '../record/recorder';
+
+const PODIUM = ['text-gold', 'text-[#c8d3e8]', 'text-[#e19a5c]'];
 
 export function LeaderboardPage() {
   const { user } = useAuth();
@@ -11,47 +15,98 @@ export function LeaderboardPage() {
     queryFn: () => get<LeaderboardEntry[]>('/territory/leaderboard'),
   });
 
+  const podium = data?.slice(0, 3) ?? [];
+  const rest = data?.slice(3) ?? [];
+
   return (
-    <div className="h-full overflow-y-auto p-4 pb-8">
-      <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
-      <p className="mt-1 text-sm text-slate-400">Who owns the most turf?</p>
+    <div className="mx-auto h-full w-full max-w-lg overflow-y-auto p-4 pb-8">
+      <h1 className="t-title text-ink">Leaderboard</h1>
+      <p className="mt-0.5 text-[13px] text-ink-2">Who owns the most turf?</p>
 
-      {isLoading && <p className="mt-8 text-center text-slate-400">Loading…</p>}
+      {isLoading && <p className="py-10 text-center text-ink-2">Loading…</p>}
 
-      <div className="mt-5 space-y-2">
-        {data?.map((e, i) => (
+      {podium.length > 0 && (
+        <div className="mt-5 grid grid-cols-3 items-end gap-2.5">
+          {/* visual order: 2nd, 1st, 3rd */}
+          {[podium[1], podium[0], podium[2]].map((e, col) =>
+            e ? (
+              <PodiumCard
+                key={e.user.id}
+                entry={e}
+                place={col === 1 ? 1 : col === 0 ? 2 : 3}
+                me={e.user.id === user?.id}
+              />
+            ) : (
+              <div key={`empty-${col}`} />
+            ),
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 space-y-2">
+        {rest.map((e, i) => (
           <div
             key={e.user.id}
-            className={`flex items-center gap-3 rounded-xl border p-3 ${
-              e.user.id === user?.id
-                ? 'border-emerald-500/60 bg-emerald-500/10'
-                : 'border-slate-700 bg-slate-800/60'
+            className={`card flex items-center gap-3 p-3 ${
+              e.user.id === user?.id ? 'border-volt/40 bg-volt/5' : ''
             }`}
           >
-            <div className="w-8 text-center text-lg font-bold text-slate-300">
-              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-            </div>
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-slate-900"
-              style={{ backgroundColor: e.user.color }}
-            >
-              {e.user.displayName.slice(0, 1).toUpperCase()}
-            </div>
+            <span className="w-6 text-center text-[13px] font-bold text-ink-3">{i + 4}</span>
+            <Avatar user={e.user} size={34} />
             <div className="min-w-0 flex-1">
-              <div className="truncate font-semibold text-white">{e.user.displayName}</div>
-              <div className="text-xs text-slate-400">
+              <div className="truncate text-[13.5px] font-bold text-ink">{e.user.displayName}</div>
+              <div className="text-[11.5px] text-ink-2">
                 Lv {e.level} · {formatDistance(e.weeklyDistanceM)} this week
               </div>
             </div>
             <div className="text-right">
-              <div className="font-bold text-emerald-300">{e.cellsOwned} 🚩</div>
-              <div className="text-xs text-slate-400">{e.xp} XP</div>
+              <div className="inline-flex items-center gap-1 text-[14px] font-extrabold text-volt tabular-nums">
+                <FlagIcon size={13} /> {e.cellsOwned}
+              </div>
+              <div className="text-[11px] text-ink-3">{e.xp} XP</div>
             </div>
           </div>
         ))}
         {data?.length === 0 && (
-          <p className="py-12 text-center text-slate-400">No territory claimed yet. Be first!</p>
+          <EmptyState
+            icon={<TrophyIcon size={32} />}
+            title="No territory claimed yet"
+            hint="Be the first — every run claims the cells you cross."
+          />
         )}
+      </div>
+    </div>
+  );
+}
+
+function PodiumCard({
+  entry,
+  place,
+  me,
+}: {
+  entry: LeaderboardEntry;
+  place: 1 | 2 | 3;
+  me: boolean;
+}) {
+  return (
+    <div
+      className={`card anim-rise flex flex-col items-center gap-1.5 px-2 pb-3 ${
+        place === 1 ? 'border-gold/30 pt-5' : 'pt-3'
+      } ${me ? 'border-volt/40' : ''}`}
+      style={{ animationDelay: `${place * 0.08}s` }}
+    >
+      <span className={`text-[13px] font-black ${PODIUM[place - 1]}`}>
+        {place === 1 ? <TrophyIcon size={18} /> : `#${place}`}
+      </span>
+      <Avatar user={entry.user} size={place === 1 ? 52 : 42} ring={place === 1} />
+      <div className="w-full truncate text-center text-[12.5px] font-bold text-ink">
+        {entry.user.displayName}
+      </div>
+      <div className="inline-flex items-center gap-1 text-[15px] font-extrabold text-volt tabular-nums">
+        <FlagIcon size={13} /> {entry.cellsOwned}
+      </div>
+      <div className="text-[10.5px] text-ink-3">
+        Lv {entry.level} · {formatDistance(entry.weeklyDistanceM)}/wk
       </div>
     </div>
   );
