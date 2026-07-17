@@ -49,7 +49,7 @@ export function AuthPage() {
             <BoltIcon size={34} strokeWidth={2.2} className="text-[#0a0f1e]" />
           </div>
           <h1 className="t-display mt-4 text-[2.1rem] text-ink">RunTurf</h1>
-          <p className="mt-1.5 text-[13.5px] text-ink-2">
+          <p className="mt-1.5 text-[14px] text-ink-2">
             Run. Capture territory. Defend your turf.
           </p>
         </div>

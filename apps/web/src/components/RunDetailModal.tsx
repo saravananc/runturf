@@ -55,8 +55,8 @@ export function RunDetailModal({
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
       <div className="card-raised anim-pop flex max-h-full w-full max-w-md flex-col overflow-hidden">
-        <div className="h-64">{run && <MapView onMap={onMap} />}</div>
-        <div className="p-4">
+        <div className="h-64 shrink-0">{run && <MapView onMap={onMap} />}</div>
+        <div className="min-h-0 overflow-y-auto p-4">
           {run && (
             <div className="flex items-baseline gap-4">
               <span className="text-[22px] font-extrabold tracking-tight text-ink tabular-nums">
@@ -78,7 +78,7 @@ export function RunDetailModal({
               className="btn btn-ghost px-4 py-2.5 text-skyx"
               aria-label="Download GPX"
             >
-              <DownloadIcon size={17} /> GPX
+              <DownloadIcon size={18} /> GPX
             </button>
             <button
               onClick={async () => {

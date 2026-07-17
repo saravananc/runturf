@@ -1,13 +1,13 @@
 import { levelProgress, type RunReport } from '@runturf/shared';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
-import { CoinIcon, FlagIcon, SwordsIcon } from './icons';
+import { CoinIcon, FlagIcon, FlameIcon, SwordsIcon } from './icons';
 import { CountUp, ProgressRing } from './ui';
 
 export function RunReportModal({ report, onClose }: { report: RunReport; onClose: () => void }) {
   const { run, stats } = report;
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
-      <div className="card-raised anim-pop w-full max-w-sm p-6">
+      <div className="card-raised anim-pop max-h-full w-full max-w-sm overflow-y-auto p-6">
         <p className="t-label text-center">Run complete</p>
 
         {/* Hero: distance inside the ring; ring shows progress toward next level */}
@@ -19,7 +19,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
             label={`Level ${stats.level} progress`}
           >
             <span className="t-display text-[26px] text-ink">{formatDistance(run.distanceM)}</span>
-            <span className="mt-0.5 text-[11.5px] font-semibold text-ink-2">
+            <span className="mt-0.5 text-[12px] font-semibold text-ink-2">
               Lv {stats.level} · <CountUp to={report.xpGained} prefix="+" /> XP
             </span>
           </ProgressRing>
@@ -32,7 +32,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
             label="Coins"
             value={
               <span className="inline-flex items-center gap-1 text-gold">
-                <CoinIcon size={15} /> +{report.coinsGained}
+                <CoinIcon size={14} /> +{report.coinsGained}
               </span>
             }
             delay={0.26}
@@ -41,7 +41,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
             label="Captured"
             value={
               <span className="inline-flex items-center gap-1 text-volt">
-                <FlagIcon size={15} /> {run.cellsCaptured}
+                <FlagIcon size={14} /> {run.cellsCaptured}
               </span>
             }
             delay={0.34}
@@ -50,12 +50,20 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
             label="Stolen"
             value={
               <span className="inline-flex items-center gap-1 text-ember">
-                <SwordsIcon size={15} /> {run.cellsStolen}
+                <SwordsIcon size={14} /> {run.cellsStolen}
               </span>
             }
             delay={0.42}
           />
-          <Cell label="Streak" value={`${stats.streakDays}d 🔥`} delay={0.5} />
+          <Cell
+            label="Streak"
+            value={
+              <span className="inline-flex items-center gap-1 text-ember">
+                <FlameIcon size={14} /> {stats.streakDays}d
+              </span>
+            }
+            delay={0.5}
+          />
         </div>
 
         {report.personalBests.length > 0 && (
@@ -68,7 +76,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
         )}
 
         {report.newAchievements.length > 0 && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-2.5">
             {report.newAchievements.map((a, i) => (
               <div
                 key={a.code}
@@ -79,7 +87,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
                   {a.icon}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-gold">{a.title}</div>
+                  <div className="text-[14px] font-bold text-gold">{a.title}</div>
                   <div className="truncate text-xs text-ink-2">{a.description}</div>
                 </div>
                 <span className="ml-auto text-xs font-bold text-ink-2">+{a.xpReward}</span>
@@ -111,7 +119,7 @@ function Cell({
       style={{ animationDelay: `${delay}s` }}
     >
       <div className="t-label">{label}</div>
-      <div className="mt-0.5 text-[14.5px] font-bold text-ink tabular-nums">{value}</div>
+      <div className="mt-0.5 text-[15px] font-bold text-ink tabular-nums">{value}</div>
     </div>
   );
 }

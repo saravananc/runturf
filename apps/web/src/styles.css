@@ -16,10 +16,10 @@
   --color-elev2: #182340;
   --color-elev3: #1f2c50;
 
-  /* Ink */
+  /* Ink — ink-3 must hold >=4.5:1 on elev2, the deepest surface it sits on */
   --color-ink: #f1f5fb;
   --color-ink-2: #9aa7bd;
-  --color-ink-3: #667089;
+  --color-ink-3: #8290ac;
 
   /* Brand + accents */
   --color-volt: #adeb2e;
@@ -29,6 +29,9 @@
   --color-skyx: #38bdf8;
   --color-gold: #ffc53d;
   --color-ember: #ff5d73;
+  /* podium metals */
+  --color-silver: #c8d3e8;
+  --color-bronze: #e19a5c;
 
   --radius-card: 1rem;
   --radius-ctl: 0.75rem;
@@ -49,7 +52,7 @@ body {
   background: var(--color-base);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -117,6 +120,7 @@ body {
     gap: 0.5rem;
     border-radius: var(--radius-ctl);
     font-weight: 700;
+    white-space: nowrap;
     transition:
       transform 0.12s ease,
       background-color 0.15s ease,
@@ -258,6 +262,7 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important; /* staggered items must not sit invisible */
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }

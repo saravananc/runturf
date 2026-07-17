@@ -34,7 +34,7 @@ export function FeedTab() {
           <div className="flex items-center gap-3">
             <Avatar user={item.user} size={38} />
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] leading-tight">
+              <div className="text-[14px] leading-tight">
                 <span className="font-bold text-ink">
                   {item.user.id === user?.id ? 'You' : item.user.displayName}
                 </span>{' '}
@@ -42,7 +42,7 @@ export function FeedTab() {
                   ran <span className="font-bold text-ink">{formatDistance(item.distanceM)}</span>
                 </span>
               </div>
-              <div className="mt-0.5 text-[11.5px] text-ink-3">
+              <div className="mt-0.5 text-[12px] text-ink-3">
                 {new Date(item.startedAt).toLocaleString(undefined, {
                   weekday: 'short',
                   month: 'short',
@@ -52,21 +52,21 @@ export function FeedTab() {
                 })}
               </div>
             </div>
-            <span className="shrink-0 text-[12.5px] font-bold text-volt">
+            <span className="shrink-0 text-[13px] font-bold text-volt">
               +{item.xpGained} XP
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-3 border-t border-white/6 pt-2.5 text-[12.5px] text-ink-2">
+          <div className="mt-3 flex items-center gap-3 border-t border-white/6 pt-2.5 text-[13px] text-ink-2">
             <span>{formatDuration(item.durationS)}</span>
             <span className="text-ink-3">·</span>
             <span>{formatPace(item.avgPaceSPerKm)}</span>
             <span className="ml-auto inline-flex items-center gap-2 font-semibold">
               <span className="inline-flex items-center gap-1 text-volt">
-                <FlagIcon size={13} /> {item.cellsCaptured}
+                <FlagIcon size={14} /> {item.cellsCaptured}
               </span>
               {item.cellsStolen > 0 && (
                 <span className="inline-flex items-center gap-1 text-ember">
-                  <SwordsIcon size={13} /> {item.cellsStolen}
+                  <SwordsIcon size={14} /> {item.cellsStolen}
                 </span>
               )}
             </span>

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { get } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import { CoinIcon, FlagIcon, FlameIcon, RouteIcon, TargetIcon } from '../components/icons';
+import { CoinIcon, FlagIcon, FlameIcon, MapIcon, RouteIcon, TargetIcon } from '../components/icons';
 import { Avatar, ProgressRing, SectionHeading, StatTile } from '../components/ui';
 import { formatDistance } from '../record/recorder';
 
@@ -32,9 +32,9 @@ export function ProfilePage() {
         {user && <Avatar user={user} size={56} ring />}
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[19px] font-extrabold text-ink">{user?.displayName}</h1>
-          <p className="text-[12.5px] text-ink-2">@{user?.username}</p>
+          <p className="text-[13px] text-ink-2">@{user?.username}</p>
         </div>
-        <button onClick={logout} className="btn btn-ghost px-3.5 py-2 text-[12.5px]">
+        <button onClick={logout} className="btn btn-ghost px-3.5 py-2 text-[13px]">
           Sign out
         </button>
       </div>
@@ -48,7 +48,7 @@ export function ProfilePage() {
               <span className="t-display text-[30px] text-volt">{lp.level}</span>
             </ProgressRing>
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-bold text-ink">
+              <div className="text-[14px] font-bold text-ink">
                 {stats.xp - lp.currentLevelXp}
                 <span className="font-medium text-ink-3">
                   {' '}
@@ -57,19 +57,24 @@ export function ProfilePage() {
               </div>
               <div className="mt-3 flex flex-col gap-2 text-[13px] font-semibold">
                 <span className="inline-flex items-center gap-1.5 text-gold">
-                  <CoinIcon size={15} /> {stats.coins} coins
+                  <CoinIcon size={14} /> {stats.coins} coins
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-ember">
-                  <FlameIcon size={15} /> {stats.streakDays}-day streak
+                  <FlameIcon size={14} /> {stats.streakDays}-day streak
                 </span>
               </div>
             </div>
           </div>
 
           <div className="mt-2.5 grid grid-cols-3 gap-2.5">
-            <StatTile label="Runs" value={stats.totalRuns} icon={<RouteIcon size={13} />} tone="volt" />
-            <StatTile label="Distance" value={formatDistance(stats.totalDistanceM)} tone="volt" />
-            <StatTile label="Turf" value={stats.cellsOwned} icon={<FlagIcon size={13} />} tone="volt" />
+            <StatTile label="Runs" value={stats.totalRuns} icon={<RouteIcon size={14} />} tone="volt" />
+            <StatTile
+              label="Distance"
+              value={formatDistance(stats.totalDistanceM)}
+              icon={<MapIcon size={14} />}
+              tone="volt"
+            />
+            <StatTile label="Turf" value={stats.cellsOwned} icon={<FlagIcon size={14} />} tone="volt" />
           </div>
         </>
       )}
@@ -110,13 +115,13 @@ export function ProfilePage() {
                   {a.icon}
                 </span>
                 <span
-                  className={`text-[11.5px] leading-tight font-bold ${
+                  className={`text-[12px] leading-tight font-bold ${
                     isUnlocked ? 'text-gold' : 'text-ink-2'
                   }`}
                 >
                   {a.title}
                 </span>
-                <span className="text-[9.5px] leading-snug text-ink-3">{a.description}</span>
+                <span className="text-[11px] leading-snug text-ink-3">{a.description}</span>
               </div>
             );
           })}

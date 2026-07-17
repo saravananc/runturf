@@ -10,11 +10,11 @@ export function MapPage() {
       <MapView onMap={attach} />
       <div className="glass pointer-events-none absolute top-3 left-3 flex items-center gap-2.5 px-3.5 py-2.5">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-volt/15 text-volt">
-          <FlagIcon size={17} />
+          <FlagIcon size={18} />
         </span>
         <div>
-          <div className="text-[13.5px] font-bold text-ink">Territory map</div>
-          <div className="text-[11.5px] text-ink-2">Run through a cell to claim it</div>
+          <div className="text-[14px] font-bold text-ink">Territory map</div>
+          <div className="text-[12px] text-ink-2">Run through a cell to claim it</div>
         </div>
       </div>
     </div>

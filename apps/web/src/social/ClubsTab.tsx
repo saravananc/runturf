@@ -65,19 +65,19 @@ function MyClub({ club }: { club: ClubDetail }) {
 
       <section>
         <SectionHeading>Members</SectionHeading>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {club.members.map((m) => (
             <div key={m.id} className="card flex items-center gap-3 p-3">
               <Avatar user={m} size={34} />
               <div className="min-w-0 flex-1">
-                <span className="text-[13.5px] font-bold text-ink">{m.displayName}</span>
+                <span className="text-[14px] font-bold text-ink">{m.displayName}</span>
                 {m.role === 'owner' && (
                   <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-bold text-gold">
-                    <CrownIcon size={13} /> owner
+                    <CrownIcon size={14} /> owner
                   </span>
                 )}
               </div>
-              <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2">
+              <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink-2">
                 Lv {m.level} · <FlagIcon size={12} className="text-volt" /> {m.cellsOwned}
               </span>
             </div>
@@ -119,12 +119,12 @@ function ClubChat({ clubId }: { clubId: string }) {
 
   return (
     <section className="card overflow-hidden">
-      <h3 className="border-b border-white/6 px-4 py-2.5 text-[13.5px] font-bold text-ink">
+      <h3 className="border-b border-white/6 px-4 py-2.5 text-[14px] font-bold text-ink">
         Club chat
       </h3>
-      <div className="h-56 space-y-2 overflow-y-auto p-3">
+      <div className="h-56 space-y-2.5 overflow-y-auto p-3">
         {messages?.length === 0 && (
-          <p className="py-8 text-center text-[12.5px] text-ink-3">Say hello 👋</p>
+          <p className="py-8 text-center text-[13px] text-ink-3">Say hello 👋</p>
         )}
         {messages?.map((m) => {
           const mine = m.user.id === user?.id;
@@ -217,7 +217,7 @@ function BrowseClubs() {
             maxLength={5}
             required
           />
-          {error && <p className="text-[12.5px] font-medium text-ember">{error}</p>}
+          {error && <p className="text-[13px] font-medium text-ember">{error}</p>}
           <div className="flex gap-2">
             <button disabled={create.isPending} className="btn btn-primary flex-1 py-2.5">
               Create
@@ -234,7 +234,7 @@ function BrowseClubs() {
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="w-full rounded-2xl border border-dashed border-white/15 py-3 text-[13.5px] font-bold text-ink-2 transition-colors hover:border-volt/50 hover:text-volt"
+          className="w-full rounded-2xl border border-dashed border-white/15 py-3 text-[14px] font-bold text-ink-2 transition-colors hover:border-volt/50 hover:text-volt"
         >
           + Create a club
         </button>
@@ -242,7 +242,7 @@ function BrowseClubs() {
 
       <section>
         <SectionHeading>Club rankings</SectionHeading>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {clubs?.length === 0 && (
             <EmptyState
               icon={<ShieldIcon size={32} />}
@@ -259,8 +259,8 @@ function BrowseClubs() {
               <span className="w-5 text-center text-[13px] font-bold text-ink-3">{i + 1}</span>
               <ClubBadge club={c} size={40} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-bold text-ink">{c.name}</div>
-                <div className="text-[11.5px] text-ink-3">
+                <div className="truncate text-[14px] font-bold text-ink">{c.name}</div>
+                <div className="text-[12px] text-ink-3">
                   {c.memberCount} members ·{' '}
                   <span className="font-semibold text-volt">{c.cellsOwned} cells</span> · +
                   {c.weeklyCellsCaptured} this wk
@@ -269,7 +269,7 @@ function BrowseClubs() {
               <button
                 onClick={() => join.mutate(c.id)}
                 disabled={join.isPending}
-                className="btn btn-ghost px-3.5 py-1.5 text-[12.5px] text-skyx"
+                className="btn btn-ghost px-3.5 py-1.5 text-[13px] text-skyx"
               >
                 Join
               </button>

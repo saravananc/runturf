@@ -6,7 +6,7 @@ import { FlagIcon, TrophyIcon } from '../components/icons';
 import { Avatar, EmptyState } from '../components/ui';
 import { formatDistance } from '../record/recorder';
 
-const PODIUM = ['text-gold', 'text-[#c8d3e8]', 'text-[#e19a5c]'];
+const PODIUM = ['text-gold', 'text-silver', 'text-bronze'];
 
 export function LeaderboardPage() {
   const { user } = useAuth();
@@ -43,7 +43,7 @@ export function LeaderboardPage() {
         </div>
       )}
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2.5">
         {rest.map((e, i) => (
           <div
             key={e.user.id}
@@ -54,14 +54,14 @@ export function LeaderboardPage() {
             <span className="w-6 text-center text-[13px] font-bold text-ink-3">{i + 4}</span>
             <Avatar user={e.user} size={34} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13.5px] font-bold text-ink">{e.user.displayName}</div>
-              <div className="text-[11.5px] text-ink-2">
+              <div className="truncate text-[14px] font-bold text-ink">{e.user.displayName}</div>
+              <div className="text-[12px] text-ink-2">
                 Lv {e.level} · {formatDistance(e.weeklyDistanceM)} this week
               </div>
             </div>
             <div className="text-right">
               <div className="inline-flex items-center gap-1 text-[14px] font-extrabold text-volt tabular-nums">
-                <FlagIcon size={13} /> {e.cellsOwned}
+                <FlagIcon size={14} /> {e.cellsOwned}
               </div>
               <div className="text-[11px] text-ink-3">{e.xp} XP</div>
             </div>
@@ -95,17 +95,19 @@ function PodiumCard({
       } ${me ? 'border-volt/40' : ''}`}
       style={{ animationDelay: `${place * 0.08}s` }}
     >
-      <span className={`text-[13px] font-black ${PODIUM[place - 1]}`}>
+      <span
+        className={`flex h-5 items-center justify-center text-[13px] font-black ${PODIUM[place - 1]}`}
+      >
         {place === 1 ? <TrophyIcon size={18} /> : `#${place}`}
       </span>
       <Avatar user={entry.user} size={place === 1 ? 52 : 42} ring={place === 1} />
-      <div className="w-full truncate text-center text-[12.5px] font-bold text-ink">
+      <div className="w-full truncate text-center text-[13px] font-bold text-ink">
         {entry.user.displayName}
       </div>
       <div className="inline-flex items-center gap-1 text-[15px] font-extrabold text-volt tabular-nums">
-        <FlagIcon size={13} /> {entry.cellsOwned}
+        <FlagIcon size={14} /> {entry.cellsOwned}
       </div>
-      <div className="text-[10.5px] text-ink-3">
+      <div className="text-[11px] text-ink-3">
         Lv {entry.level} · {formatDistance(entry.weeklyDistanceM)}/wk
       </div>
     </div>

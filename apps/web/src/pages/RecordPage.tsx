@@ -145,13 +145,16 @@ export function RecordPage() {
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-3">
         {!active ? (
           <>
-            <button onClick={startGps} className="btn btn-primary rounded-full px-9 py-4 text-lg">
+            <button
+              onClick={startGps}
+              className="btn btn-primary rounded-full px-7 py-3.5 text-base sm:px-9 sm:py-4 sm:text-lg"
+            >
               <PlayIcon size={20} /> Start run
             </button>
             <button
               onClick={startSim}
               title="Replay a synthetic route (for desktop testing)"
-              className="btn btn-ghost rounded-full p-4"
+              className="btn btn-ghost rounded-full p-3.5 sm:p-4"
               aria-label="Simulate a run"
             >
               <FlaskIcon size={20} />

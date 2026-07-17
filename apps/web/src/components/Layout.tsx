@@ -33,7 +33,7 @@ export function Layout() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `group relative flex flex-1 flex-col items-center gap-1 pt-2.5 pb-2 text-[10.5px] font-semibold tracking-wide transition-colors ${
+              `group relative flex flex-1 flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-semibold tracking-wide transition-colors ${
                 isActive ? 'text-volt' : 'text-ink-3 hover:text-ink-2'
               }`
             }

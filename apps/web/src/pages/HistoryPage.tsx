@@ -2,7 +2,7 @@ import type { RunSummary, UserStats } from '@runturf/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { del, get } from '../api/client';
-import { FlagIcon, HistoryIcon, RouteIcon, SwordsIcon } from '../components/icons';
+import { FlagIcon, HistoryIcon, MapIcon, RouteIcon, SwordsIcon } from '../components/icons';
 import { RunDetailModal } from '../components/RunDetailModal';
 import { EmptyState, StatTile } from '../components/ui';
 import { WeeklyChart } from '../components/WeeklyChart';
@@ -31,12 +31,17 @@ export function HistoryPage() {
 
       {s && (
         <div className="mt-4 grid grid-cols-3 gap-2.5">
-          <StatTile label="Runs" value={s.totalRuns} icon={<RouteIcon size={13} />} tone="volt" />
-          <StatTile label="Distance" value={formatDistance(s.totalDistanceM)} tone="volt" />
+          <StatTile label="Runs" value={s.totalRuns} icon={<RouteIcon size={14} />} tone="volt" />
+          <StatTile
+            label="Distance"
+            value={formatDistance(s.totalDistanceM)}
+            icon={<MapIcon size={14} />}
+            tone="volt"
+          />
           <StatTile
             label="Turf"
             value={s.cellsOwned}
-            icon={<FlagIcon size={13} />}
+            icon={<FlagIcon size={14} />}
             tone="volt"
           />
         </div>
@@ -67,9 +72,9 @@ export function HistoryPage() {
               <span className="text-[19px] font-extrabold tracking-tight text-ink tabular-nums">
                 {formatDistance(r.distanceM)}
               </span>
-              <span className="text-[12.5px] font-bold text-volt">+{r.xpGained} XP</span>
+              <span className="text-[13px] font-bold text-volt">+{r.xpGained} XP</span>
             </div>
-            <div className="mt-1.5 flex items-center gap-3 text-[12.5px] text-ink-2">
+            <div className="mt-1.5 flex items-center gap-3 text-[13px] text-ink-2">
               <span>
                 {new Date(r.startedAt).toLocaleDateString(undefined, {
                   weekday: 'short',
@@ -83,11 +88,11 @@ export function HistoryPage() {
               <span>{formatPace(r.avgPaceSPerKm)}</span>
               <span className="ml-auto inline-flex items-center gap-2 font-semibold">
                 <span className="inline-flex items-center gap-1 text-volt">
-                  <FlagIcon size={13} /> {r.cellsCaptured}
+                  <FlagIcon size={14} /> {r.cellsCaptured}
                 </span>
                 {r.cellsStolen > 0 && (
                   <span className="inline-flex items-center gap-1 text-ember">
-                    <SwordsIcon size={13} /> {r.cellsStolen}
+                    <SwordsIcon size={14} /> {r.cellsStolen}
                   </span>
                 )}
               </span>

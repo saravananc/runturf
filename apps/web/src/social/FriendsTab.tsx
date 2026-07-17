@@ -64,16 +64,16 @@ export function FriendsTab() {
           }}
         />
         {notice && (
-          <p className="anim-rise mt-2 text-[12.5px] font-semibold text-volt">{notice}</p>
+          <p className="anim-rise mt-2 text-[13px] font-semibold text-volt">{notice}</p>
         )}
         {results.data && results.data.length > 0 && (
-          <div className="mt-2.5 space-y-2">
+          <div className="mt-2.5 space-y-2.5">
             {results.data.map((u) => (
               <Row key={u.id} user={u}>
                 <button
                   onClick={() => sendRequest.mutate(u.username)}
                   disabled={sendRequest.isPending}
-                  className="btn btn-primary px-3.5 py-1.5 text-[12.5px]"
+                  className="btn btn-primary px-3.5 py-1.5 text-[13px]"
                 >
                   Add friend
                 </button>
@@ -82,25 +82,25 @@ export function FriendsTab() {
           </div>
         )}
         {results.data?.length === 0 && (
-          <p className="mt-2 text-[12.5px] text-ink-3">No runners match “{query}”.</p>
+          <p className="mt-2 text-[13px] text-ink-3">No runners match “{query}”.</p>
         )}
       </div>
 
       {incoming.length > 0 && (
         <section>
           <SectionHeading>Requests</SectionHeading>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {incoming.map((r) => (
               <Row key={r.id} user={r.user} highlight>
                 <button
                   onClick={() => respond.mutate({ id: r.id, action: 'accept' })}
-                  className="btn btn-primary px-3.5 py-1.5 text-[12.5px]"
+                  className="btn btn-primary px-3.5 py-1.5 text-[13px]"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => respond.mutate({ id: r.id, action: 'decline' })}
-                  className="btn btn-ghost px-3 py-1.5 text-[12.5px]"
+                  className="btn btn-ghost px-3 py-1.5 text-[13px]"
                 >
                   Decline
                 </button>
@@ -120,9 +120,9 @@ export function FriendsTab() {
         >
           Friends
         </SectionHeading>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {friends.data?.length === 0 && (
-            <p className="text-[12.5px] text-ink-3">No friends yet — search above to add some.</p>
+            <p className="text-[13px] text-ink-3">No friends yet — search above to add some.</p>
           )}
           {friends.data?.map((f) => (
             <Row
@@ -144,7 +144,7 @@ export function FriendsTab() {
       {outgoing.length > 0 && (
         <section>
           <SectionHeading>Sent</SectionHeading>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {outgoing.map((r) => (
               <Row key={r.id} user={r.user} sub="Pending…" />
             ))}
@@ -172,8 +172,8 @@ function Row({
     >
       <Avatar user={user} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13.5px] font-bold text-ink">{user.displayName}</div>
-        <div className="truncate text-[11.5px] text-ink-3">{sub ?? `@${user.username}`}</div>
+        <div className="truncate text-[14px] font-bold text-ink">{user.displayName}</div>
+        <div className="truncate text-[12px] text-ink-3">{sub ?? `@${user.username}`}</div>
       </div>
       {children}
     </div>
