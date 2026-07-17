@@ -124,6 +124,72 @@ export const userAchievements = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.code] })],
 );
 
+export const friendships = pgTable(
+  'friendships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requesterId: uuid('requester_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    addresseeId: uuid('addressee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'), // 'pending' | 'accepted'
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('friendships_pair_idx').on(t.requesterId, t.addresseeId),
+    index('friendships_addressee_idx').on(t.addresseeId),
+  ],
+);
+
+export const clubs = pgTable('clubs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  tag: text('tag').notNull().unique(), // short uppercase handle, e.g. "WOLF"
+  description: text('description').notNull().default(''),
+  color: text('color').notNull().default('#8b5cf6'),
+  ownerId: uuid('owner_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const clubMembers = pgTable(
+  'club_members',
+  {
+    clubId: uuid('club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('member'), // 'owner' | 'member'
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.clubId, t.userId] }),
+    // one club per user
+    uniqueIndex('club_members_user_idx').on(t.userId),
+  ],
+);
+
+export const clubMessages = pgTable(
+  'club_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clubId: uuid('club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('club_messages_club_time_idx').on(t.clubId, t.createdAt)],
+);
+
 export const challenges = pgTable('challenges', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: text('code').notNull(),

@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 const tabs = [
   { to: '/', label: 'Map', icon: '🗺️' },
   { to: '/record', label: 'Record', icon: '⏺️' },
+  { to: '/social', label: 'Social', icon: '👥' },
   { to: '/history', label: 'History', icon: '📜' },
   { to: '/leaderboard', label: 'Rank', icon: '🏆' },
   { to: '/profile', label: 'Profile', icon: '👤' },

@@ -87,6 +87,57 @@ export interface LeaderboardEntry {
   level: number;
 }
 
+export interface FriendEntry {
+  user: UserPublic;
+  since: string;
+  level: number;
+  cellsOwned: number;
+  totalDistanceM: number;
+}
+
+export interface FriendRequest {
+  id: string;
+  user: UserPublic;
+  direction: 'incoming' | 'outgoing';
+  createdAt: string;
+}
+
+export interface FeedItem {
+  id: string;
+  user: UserPublic;
+  startedAt: string;
+  distanceM: number;
+  durationS: number;
+  avgPaceSPerKm: number | null;
+  cellsCaptured: number;
+  cellsStolen: number;
+  xpGained: number;
+}
+
+export interface ClubSummary {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  color: string;
+  memberCount: number;
+  cellsOwned: number;
+  weeklyCellsCaptured: number;
+}
+
+export interface ClubDetail extends ClubSummary {
+  ownerId: string;
+  members: (UserPublic & { role: string; level: number; cellsOwned: number })[];
+  myRole: 'owner' | 'member' | null;
+}
+
+export interface ClubMessage {
+  id: string;
+  user: UserPublic;
+  body: string;
+  createdAt: string;
+}
+
 export interface Challenge {
   id: string;
   code: string;

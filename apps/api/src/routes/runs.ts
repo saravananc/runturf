@@ -49,3 +49,34 @@ runsRouter.delete(
     res.status(204).end();
   }),
 );
+
+runsRouter.get(
+  '/:id/gpx',
+  h(async (req, res) => {
+    const run = await getRun(req.userId, idParam(req.params.id));
+    const date = run.startedAt.slice(0, 10);
+    res
+      .type('application/gpx+xml')
+      .setHeader('Content-Disposition', `attachment; filename="runturf-${date}.gpx"`)
+      .send(toGpx(run));
+  }),
+);
+
+function toGpx(run: { startedAt: string; points: { lat: number; lng: number; t: number }[] }) {
+  const trkpts = run.points
+    .map(
+      (p) =>
+        `      <trkpt lat="${p.lat}" lon="${p.lng}"><time>${new Date(p.t).toISOString()}</time></trkpt>`,
+    )
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="RunTurf" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>RunTurf run ${run.startedAt}</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>
+`;
+}

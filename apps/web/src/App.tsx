@@ -8,6 +8,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { MapPage } from './pages/MapPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordPage } from './pages/RecordPage';
+import { SocialPage } from './pages/SocialPage';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ export function App() {
         <Route path="/" element={<MapPage />} />
         <Route path="/record" element={<RecordPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/social" element={<SocialPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/challenges" element={<ChallengesPage />} />
         <Route path="/profile" element={<ProfilePage />} />

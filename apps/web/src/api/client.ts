@@ -83,6 +83,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return (await res.json()) as T;
 }
 
+/** Fetches a binary/text resource (e.g. GPX) and returns it as a Blob. */
+export async function getBlob(path: string): Promise<Blob> {
+  let res = await rawFetch(path);
+  if (res.status === 401 && (await tryRefresh())) {
+    res = await rawFetch(path);
+  }
+  if (!res.ok) throw new ApiError(res.status, `Download failed (${res.status})`);
+  return res.blob();
+}
+
 export const get = <T>(path: string) => api<T>(path);
 export const post = <T>(path: string, body?: unknown) =>
   api<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });

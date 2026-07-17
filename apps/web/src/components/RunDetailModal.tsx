@@ -1,7 +1,7 @@
 import type { RunPointInput, RunSummary } from '@runturf/shared';
 import { useQuery } from '@tanstack/react-query';
 import maplibregl from 'maplibre-gl';
-import { get } from '../api/client';
+import { get, getBlob } from '../api/client';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
 import { MapView } from './MapView';
 
@@ -64,6 +64,12 @@ export function RunDetailModal({
               Close
             </button>
             <button
+              onClick={() => downloadGpx(runId)}
+              className="rounded-lg bg-sky-500/20 px-4 py-2 font-semibold text-sky-300 hover:bg-sky-500/30"
+            >
+              GPX ↓
+            </button>
+            <button
               onClick={async () => {
                 await onDelete(runId);
                 onClose();
@@ -77,4 +83,14 @@ export function RunDetailModal({
       </div>
     </div>
   );
+}
+
+async function downloadGpx(runId: string) {
+  const blob = await getBlob(`/runs/${runId}/gpx`);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `runturf-${runId.slice(0, 8)}.gpx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
