@@ -26,20 +26,20 @@ export function LeaderboardPage() {
       {isLoading && <p className="py-10 text-center text-ink-2">Loading…</p>}
 
       {podium.length > 0 && (
-        <div className="mt-5 grid grid-cols-3 items-end gap-2.5">
-          {/* visual order: 2nd, 1st, 3rd */}
-          {[podium[1], podium[0], podium[2]].map((e, col) =>
-            e ? (
+        <div className="mt-5 flex items-end justify-center gap-2.5">
+          {/* visual order: 2nd, 1st, 3rd — absent places take no space */}
+          {[podium[1], podium[0], podium[2]]
+            .flatMap((e, col) =>
+              e ? [{ entry: e, place: (col === 1 ? 1 : col === 0 ? 2 : 3) as 1 | 2 | 3 }] : [],
+            )
+            .map(({ entry, place }) => (
               <PodiumCard
-                key={e.user.id}
-                entry={e}
-                place={col === 1 ? 1 : col === 0 ? 2 : 3}
-                me={e.user.id === user?.id}
+                key={entry.user.id}
+                entry={entry}
+                place={place}
+                me={entry.user.id === user?.id}
               />
-            ) : (
-              <div key={`empty-${col}`} />
-            ),
-          )}
+            ))}
         </div>
       )}
 
@@ -90,8 +90,8 @@ function PodiumCard({
 }) {
   return (
     <div
-      className={`card anim-rise flex flex-col items-center gap-1.5 px-2 pb-3 ${
-        place === 1 ? 'border-gold/30 pt-5' : 'pt-3'
+      className={`card anim-rise flex min-w-0 flex-1 basis-0 flex-col items-center gap-1.5 px-2 pb-3 ${
+        place === 1 ? 'max-w-44 border-gold/30 pt-5' : 'max-w-40 pt-3'
       } ${me ? 'border-volt/40' : ''}`}
       style={{ animationDelay: `${place * 0.08}s` }}
     >
@@ -101,14 +101,19 @@ function PodiumCard({
         {place === 1 ? <TrophyIcon size={18} /> : `#${place}`}
       </span>
       <Avatar user={entry.user} size={place === 1 ? 52 : 42} ring={place === 1} />
-      <div className="w-full truncate text-center text-[13px] font-bold text-ink">
-        {entry.user.displayName}
+      <div className="flex min-h-9 w-full items-center justify-center px-1">
+        <div className="line-clamp-2 text-center text-[13px] leading-tight font-bold break-words text-ink">
+          {entry.user.displayName}
+        </div>
       </div>
       <div className="inline-flex items-center gap-1 text-[15px] font-extrabold text-volt tabular-nums">
         <FlagIcon size={14} /> {entry.cellsOwned}
       </div>
-      <div className="text-[11px] text-ink-3">
-        Lv {entry.level} · {formatDistance(entry.weeklyDistanceM)}/wk
+      <div className="flex flex-col items-center leading-tight">
+        <span className="text-[11px] whitespace-nowrap text-ink-3">Lv {entry.level}</span>
+        <span className="text-[11px] whitespace-nowrap text-ink-3">
+          {formatDistance(entry.weeklyDistanceM)}/wk
+        </span>
       </div>
     </div>
   );
