@@ -29,7 +29,8 @@
           "locationWhenInUsePermission": "RunTurf uses your location to record runs and capture territory."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ]
   }
 }
