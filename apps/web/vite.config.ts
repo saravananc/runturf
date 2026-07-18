@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'RunTurf',
         short_name: 'RunTurf',
         description: 'Run to capture territory',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#0a0f1e',
+        background_color: '#0a0f1e',
         display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -29,6 +29,16 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+    },
+  },
+  preview: {
+    port: 4173,
     proxy: {
       '/api': {
         target: 'http://localhost:4000',
