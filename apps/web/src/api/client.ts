@@ -21,6 +21,22 @@ export function hasSession(): boolean {
   return !!refreshToken;
 }
 
+/** Revokes the refresh token server-side, then clears local tokens. */
+export async function revokeSession(): Promise<void> {
+  const token = refreshToken;
+  setTokens(null);
+  if (!token) return;
+  try {
+    await fetch(`${BASE}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: token }),
+    });
+  } catch {
+    // Offline: local tokens are already cleared; the token expires server-side on its own.
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

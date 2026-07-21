@@ -87,6 +87,65 @@ describe('auth flow', () => {
     expect(reuse.status).toBe(401);
   });
 
+  it('logout revokes the refresh token server-side', async () => {
+    const fresh = await request(app)
+      .post('/auth/login')
+      .send({ username: uname, password: 'password123' });
+    expect(fresh.status).toBe(200);
+    const rt = fresh.body.refreshToken as string;
+
+    // token works before logout
+    expect((await request(app).post('/auth/refresh').send({ refreshToken: rt })).status).toBe(200);
+
+    // ...but that refresh rotated it, so log in again for a clean token
+    const again = await request(app)
+      .post('/auth/login')
+      .send({ username: uname, password: 'password123' });
+    const rt2 = again.body.refreshToken as string;
+
+    expect((await request(app).post('/auth/logout').send({ refreshToken: rt2 })).status).toBe(204);
+    // revoked: it must no longer be usable
+    expect((await request(app).post('/auth/refresh').send({ refreshToken: rt2 })).status).toBe(401);
+  });
+
+  it('logout is idempotent and never leaks token validity', async () => {
+    expect(
+      (await request(app).post('/auth/logout').send({ refreshToken: 'never-existed' })).status,
+    ).toBe(204);
+    expect((await request(app).post('/auth/logout').send({})).status).toBe(400);
+  });
+
+  it('logout-all revokes every session for the user', async () => {
+    const a = await request(app).post('/auth/login').send({ username: uname, password: 'password123' });
+    const b = await request(app).post('/auth/login').send({ username: uname, password: 'password123' });
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+
+    const res = await request(app)
+      .post('/auth/logout-all')
+      .set('Authorization', `Bearer ${a.body.accessToken}`);
+    expect(res.status).toBe(204);
+
+    // both device sessions are dead
+    expect(
+      (await request(app).post('/auth/refresh').send({ refreshToken: a.body.refreshToken })).status,
+    ).toBe(401);
+    expect(
+      (await request(app).post('/auth/refresh').send({ refreshToken: b.body.refreshToken })).status,
+    ).toBe(401);
+  });
+
+  it('logout-all requires authentication', async () => {
+    expect((await request(app).post('/auth/logout-all')).status).toBe(401);
+  });
+
+  it('sends security headers (helmet)', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBeDefined();
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
+
   it('updates the profile', async () => {
     const res = await request(app)
       .patch('/users/me')

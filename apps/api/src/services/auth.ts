@@ -1,7 +1,7 @@
 import type { AuthResponse, UserPublic } from '@runturf/shared';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import { ACCESS_TOKEN_TTL, config, REFRESH_TOKEN_TTL_DAYS } from '../config.js';
 import { db } from '../db/client.js';
@@ -43,6 +43,10 @@ async function issueRefreshToken(userId: string): Promise<string> {
   const token = randomBytes(48).toString('base64url');
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 86400_000);
   await db.insert(refreshTokens).values({ userId, tokenHash: hashToken(token), expiresAt });
+  // Opportunistic sweep: drop this user's expired tokens so the table stays bounded.
+  await db
+    .delete(refreshTokens)
+    .where(and(eq(refreshTokens.userId, userId), lt(refreshTokens.expiresAt, new Date())));
   return token;
 }
 
@@ -100,4 +104,17 @@ export async function refresh(token: string): Promise<AuthResponse> {
   const user = await db.query.users.findFirst({ where: eq(users.id, row.userId) });
   if (!user) throw unauthorized('User no longer exists');
   return buildAuthResponse(user);
+}
+
+/**
+ * Revokes a single refresh token (sign-out on this device).
+ * Idempotent: unknown/already-revoked tokens are a no-op so logout never fails.
+ */
+export async function logout(token: string): Promise<void> {
+  await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, hashToken(token)));
+}
+
+/** Revokes every refresh token for a user (sign-out everywhere / after a leak). */
+export async function logoutAll(userId: string): Promise<void> {
+  await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 }

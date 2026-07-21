@@ -5,7 +5,7 @@ import { db } from '../db/client.js';
 import { users } from '../db/schema.js';
 import { notFound } from '../errors.js';
 import { h, parseBody, requireAuth } from '../middleware.js';
-import { login, refresh, register, toPublic } from '../services/auth.js';
+import { login, logout, logoutAll, refresh, register, toPublic } from '../services/auth.js';
 
 const Credentials = z.object({
   username: z.string().min(3).max(24),
@@ -34,6 +34,24 @@ authRouter.post(
   h(async (req, res) => {
     const { refreshToken } = parseBody(z.object({ refreshToken: z.string().min(1) }), req.body);
     res.json(await refresh(refreshToken));
+  }),
+);
+
+authRouter.post(
+  '/logout',
+  h(async (req, res) => {
+    const { refreshToken } = parseBody(z.object({ refreshToken: z.string().min(1) }), req.body);
+    await logout(refreshToken);
+    res.status(204).end();
+  }),
+);
+
+authRouter.post(
+  '/logout-all',
+  requireAuth,
+  h(async (req, res) => {
+    await logoutAll(req.userId);
+    res.status(204).end();
   }),
 );
 

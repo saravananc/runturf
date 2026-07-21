@@ -91,6 +91,7 @@ export default function App() {
     Inter_800ExtraBold,
   });
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>('');
 
   if (!fontsLoaded) {
@@ -101,11 +102,30 @@ export default function App() {
     <View style={styles.root}>
       <StatusBar style="light" />
       {token ? (
-        <MainScreen token={token} userId={userId} onLogout={() => setToken(null)} />
+        <MainScreen
+          token={token}
+          userId={userId}
+          onLogout={() => {
+            const rt = refreshToken;
+            setToken(null);
+            setRefreshToken(null);
+            // Revoke server-side so the refresh token cannot outlive sign-out.
+            if (rt) {
+              fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken: rt }),
+              }).catch(() => {
+                /* offline: token expires server-side on its own */
+              });
+            }
+          }}
+        />
       ) : (
         <LoginScreen
-          onAuth={(t, uid) => {
+          onAuth={(t, uid, rt) => {
             setToken(t);
+            setRefreshToken(rt);
             setUserId(uid);
           }}
         />
@@ -179,7 +199,11 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
 
 /* ---------- login ---------- */
 
-function LoginScreen({ onAuth }: { onAuth: (token: string, userId: string) => void }) {
+function LoginScreen({
+  onAuth,
+}: {
+  onAuth: (token: string, userId: string, refreshToken: string) => void;
+}) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -196,7 +220,7 @@ function LoginScreen({ onAuth }: { onAuth: (token: string, userId: string) => vo
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Request failed');
-      onAuth(body.accessToken, body.user.id);
+      onAuth(body.accessToken, body.user.id, body.refreshToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {

@@ -1,6 +1,6 @@
 import type { AuthResponse, UserPublic } from '@runturf/shared';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { get, hasSession, post, setTokens } from '../api/client';
+import { get, hasSession, post, revokeSession, setTokens } from '../api/client';
 
 interface AuthState {
   user: UserPublic | null;
@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
-    setTokens(null);
     setUser(null);
+    void revokeSession();
   }
 
   return (
