@@ -199,4 +199,48 @@ describe('run submission pipeline', () => {
     expect(rep.stats.streakDays).toBe(1);
     expect(rep.run.cellsCaptured).toBeGreaterThanOrEqual(4);
   });
+  it('excludes paused time from duration and pace', async () => {
+    const run = syntheticRun(1000, 600); // 600 m over 200 s of GPS timestamps
+    const noPause = await request(app).post('/runs').set('Authorization', `Bearer ${alice}`).send(run);
+    expect(noPause.status).toBe(201);
+
+    const withPause = await request(app)
+      .post('/runs')
+      .set('Authorization', `Bearer ${alice}`)
+      .send({ ...syntheticRun(1500, 600), pausedMs: 60_000 }); // 60 s paused
+    expect(withPause.status).toBe(201);
+
+    // Same distance + same timestamp span, but a minute of it was paused.
+    expect(withPause.body.run.durationS).toBe(noPause.body.run.durationS - 60);
+    // Shorter moving time => faster pace (lower s/km).
+    expect(withPause.body.run.avgPaceSPerKm).toBeLessThan(noPause.body.run.avgPaceSPerKm);
+  });
+
+  it('rejects a paused duration longer than the run itself', async () => {
+    const res = await request(app)
+      .post('/runs')
+      .set('Authorization', `Bearer ${alice}`)
+      .send({ ...syntheticRun(2000, 400), pausedMs: 999_999_999 });
+    expect(res.status).toBe(400);
+  });
+
+  it('a backdated run never rewinds the streak or lastRunDate', async () => {
+    const before = await request(app).get('/users/me/stats').set('Authorization', `Bearer ${alice}`);
+    const streakBefore = before.body.streakDays;
+    const lastRunBefore = before.body.lastRunDate;
+    expect(lastRunBefore).toBeTruthy();
+
+    // Submit a run dated a week in the past.
+    const old = syntheticRun(2500, 400);
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000);
+    const res = await request(app)
+      .post('/runs')
+      .set('Authorization', `Bearer ${alice}`)
+      .send({ ...old, startedAt: weekAgo.toISOString() });
+    expect(res.status).toBe(201);
+
+    // Streak must not reset to 1, and lastRunDate must not move backwards.
+    expect(res.body.stats.streakDays).toBe(streakBefore);
+    expect(res.body.stats.lastRunDate).toBe(lastRunBefore);
+  });
 });

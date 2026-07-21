@@ -16,13 +16,16 @@ const MAX_POINTS = 100_000;
 const MAX_PLAUSIBLE_AVG_SPEED_MS = 8; // ~2:05 min/km — faster than any human run
 const MIN_POINTS = 2;
 
-export function summarizeRun(startedAt: Date, points: RunPointInput[]) {
+export function summarizeRun(startedAt: Date, points: RunPointInput[], pausedMs = 0) {
   if (points.length < MIN_POINTS) throw badRequest('A run needs at least 2 GPS points');
   if (points.length > MAX_POINTS) throw badRequest('Too many points');
   for (let i = 1; i < points.length; i++) {
     if (points[i].t < points[i - 1].t) throw badRequest('GPS timestamps must be non-decreasing');
   }
-  const durationS = Math.round((points[points.length - 1].t - points[0].t) / 1000);
+  const spanMs = points[points.length - 1].t - points[0].t;
+  if (pausedMs < 0 || pausedMs > spanMs) throw badRequest('Invalid paused duration');
+  // Moving time: paused stretches must not inflate duration or deflate pace.
+  const durationS = Math.round((spanMs - pausedMs) / 1000);
   if (durationS <= 0) throw badRequest('Run duration must be positive');
 
   const distanceM = pathDistanceM(points);
@@ -48,11 +51,11 @@ export function toRunSummary(r: typeof runs.$inferSelect): RunSummary {
 
 export async function submitRun(
   userId: string,
-  input: { startedAt: string; points: RunPointInput[] },
+  input: { startedAt: string; points: RunPointInput[]; pausedMs?: number },
 ): Promise<RunReport> {
   const startedAt = new Date(input.startedAt);
   if (Number.isNaN(startedAt.getTime())) throw badRequest('Invalid startedAt');
-  const summary = summarizeRun(startedAt, input.points);
+  const summary = summarizeRun(startedAt, input.points, input.pausedMs ?? 0);
 
   const personalBests = await detectPersonalBests(userId, summary);
 

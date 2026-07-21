@@ -27,14 +27,29 @@ export interface RewardResult {
 
 const dateKey = (d: Date) => d.toISOString().slice(0, 10); // UTC day for MVP
 
-function nextStreak(lastRunDate: string | null, today: string): number | 'same-day' {
-  if (lastRunDate === today) return 'same-day';
-  if (lastRunDate) {
-    const prev = new Date(`${lastRunDate}T00:00:00Z`);
-    prev.setUTCDate(prev.getUTCDate() + 1);
-    if (dateKey(prev) === today) return -1; // sentinel: increment
+/**
+ * Streak for a run on `runDay`, given the last recorded run day.
+ * Runs submitted out of order (backdated) must never rewind an existing streak,
+ * so an older run leaves both the streak and lastRunDate untouched.
+ */
+function computeStreak(
+  lastRunDate: string | null,
+  runDay: string,
+  currentStreak: number,
+): { streakDays: number; lastRunDate: string } {
+  if (!lastRunDate) return { streakDays: 1, lastRunDate: runDay };
+  if (runDay === lastRunDate) {
+    // Another run the same day: streak unchanged (but never below 1).
+    return { streakDays: Math.max(currentStreak, 1), lastRunDate };
   }
-  return 1;
+  if (runDay < lastRunDate) {
+    // Backdated run: keep the more recent state intact.
+    return { streakDays: Math.max(currentStreak, 1), lastRunDate };
+  }
+  const dayAfterLast = new Date(`${lastRunDate}T00:00:00Z`);
+  dayAfterLast.setUTCDate(dayAfterLast.getUTCDate() + 1);
+  const consecutive = dateKey(dayAfterLast) === runDay;
+  return { streakDays: consecutive ? currentStreak + 1 : 1, lastRunDate: runDay };
 }
 
 /**
@@ -51,10 +66,12 @@ export async function applyRunRewards(
   if (!stats) throw new Error('user_stats row missing');
 
   // Streak (computed against UTC days; timezone support deferred)
-  const today = dateKey(run.startedAt);
-  const streakStep = nextStreak(stats.lastRunDate, today);
-  const streakDays =
-    streakStep === 'same-day' ? Math.max(stats.streakDays, 1) : streakStep === -1 ? stats.streakDays + 1 : 1;
+  const runDay = dateKey(run.startedAt);
+  const { streakDays, lastRunDate } = computeStreak(
+    stats.lastRunDate,
+    runDay,
+    stats.streakDays,
+  );
 
   let xpGained = runXp({
     distanceM: run.distanceM,
@@ -173,7 +190,7 @@ export async function applyRunRewards(
       level,
       coins: stats.coins + coinsGained,
       streakDays,
-      lastRunDate: today,
+      lastRunDate,
       totalRuns,
       totalDistanceM,
     })

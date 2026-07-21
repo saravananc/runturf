@@ -16,6 +16,7 @@ const RunSubmit = z.object({
     )
     .min(2)
     .max(100_000),
+  pausedMs: z.number().nonnegative().optional(),
 });
 
 export const runsRouter = Router();

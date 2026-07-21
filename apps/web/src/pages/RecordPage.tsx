@@ -81,7 +81,8 @@ export function RecordPage() {
   }
 
   async function finish() {
-    rec.finish();
+    // finish() returns the final totals; state has not re-rendered yet here.
+    const { pausedMs } = rec.finish();
     if (rec.points.length < 2 || !rec.startedAt) {
       rec.reset();
       return;
@@ -92,6 +93,7 @@ export function RecordPage() {
       const rep = await post<RunReport>('/runs', {
         startedAt: rec.startedAt.toISOString(),
         points: rec.points,
+        pausedMs,
       });
       setReport(rep);
     } catch (err) {

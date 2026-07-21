@@ -36,6 +36,8 @@ export interface RunPointInput {
 export interface RunSubmitInput {
   startedAt: string;
   points: RunPointInput[];
+  /** Milliseconds spent paused, excluded from duration and pace. */
+  pausedMs?: number;
 }
 
 export interface RunSummary {
