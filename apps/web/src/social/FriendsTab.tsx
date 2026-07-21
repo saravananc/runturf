@@ -172,7 +172,7 @@ function Row({
     >
       <Avatar user={user} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] font-bold text-ink">{user.displayName}</div>
+        <div className="text-[14px] font-bold break-words text-ink">{user.displayName}</div>
         <div className="truncate text-[12px] text-ink-3">{sub ?? `@${user.username}`}</div>
       </div>
       {children}

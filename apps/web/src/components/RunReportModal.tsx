@@ -88,7 +88,7 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
                 </span>
                 <div className="min-w-0">
                   <div className="text-[14px] font-bold text-gold">{a.title}</div>
-                  <div className="truncate text-xs text-ink-2">{a.description}</div>
+                  <div className="text-xs text-ink-2">{a.description}</div>
                 </div>
                 <span className="ml-auto text-xs font-bold text-ink-2">+{a.xpReward}</span>
               </div>

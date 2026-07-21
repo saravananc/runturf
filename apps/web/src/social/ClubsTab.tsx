@@ -41,7 +41,7 @@ function MyClub({ club }: { club: ClubDetail }) {
         <div className="flex items-center gap-3">
           <ClubBadge club={club} size={48} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[17px] font-extrabold text-ink">{club.name}</h2>
+            <h2 className="text-[17px] font-extrabold break-words text-ink">{club.name}</h2>
             <p className="truncate text-[12px] text-ink-2">
               {club.description || 'No description'}
             </p>
@@ -259,7 +259,7 @@ function BrowseClubs() {
               <span className="w-5 text-center text-[13px] font-bold text-ink-3">{i + 1}</span>
               <ClubBadge club={c} size={40} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[14px] font-bold text-ink">{c.name}</div>
+                <div className="text-[14px] font-bold break-words text-ink">{c.name}</div>
                 <div className="text-[12px] text-ink-3">
                   {c.memberCount} members ·{' '}
                   <span className="font-semibold text-volt">{c.cellsOwned} cells</span> · +

@@ -54,7 +54,9 @@ export function LeaderboardPage() {
             <span className="w-6 text-center text-[13px] font-bold text-ink-3">{i + 4}</span>
             <Avatar user={e.user} size={34} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[14px] font-bold text-ink">{e.user.displayName}</div>
+              <div className="text-[14px] font-bold break-words text-ink">
+                {e.user.displayName}
+              </div>
               <div className="text-[12px] text-ink-2">
                 Lv {e.level} · {formatDistance(e.weeklyDistanceM)} this week
               </div>
@@ -102,7 +104,7 @@ function PodiumCard({
       </span>
       <Avatar user={entry.user} size={place === 1 ? 52 : 42} ring={place === 1} />
       <div className="flex min-h-9 w-full items-center justify-center px-1">
-        <div className="line-clamp-2 text-center text-[13px] leading-tight font-bold break-words text-ink">
+        <div className="text-center text-[13px] leading-tight font-bold break-words text-ink">
           {entry.user.displayName}
         </div>
       </div>
