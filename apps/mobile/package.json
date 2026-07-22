@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-navigation/bottom-tabs": "^7.18.13",
+    "@react-navigation/native": "^7.3.13",
+    "@runturf/shared": "file:../../packages/shared",
     "expo": "~52.0.0",
     "expo-asset": "~11.0.5",
     "expo-font": "~13.0.4",
@@ -18,7 +22,9 @@
     "expo-status-bar": "~2.0.0",
     "react": "18.3.1",
     "react-native": "0.76.9",
-    "react-native-maps": "1.18.0"
+    "react-native-maps": "1.18.0",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0"
   },
   "devDependencies": {
     "@types/react": "~18.3.12",

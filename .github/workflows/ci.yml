@@ -37,3 +37,22 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm test
+
+  # apps/mobile is not an npm workspace (Expo keeps its own dependency tree),
+  # so it needs a separate job or it gets no automated coverage at all.
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx tsc --noEmit
+      - run: npx expo-doctor
+      # Bundling is the real regression guard: it exercises the whole module
+      # graph, including the shared package resolved via metro.config.js.
+      - run: npx expo export --platform android --platform ios
