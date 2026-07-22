@@ -1,4 +1,4 @@
-import type { ClubDetail, ClubMessage, ClubSummary } from '@runturf/shared';
+import { isoWeekStart, type ClubDetail, type ClubMessage, type ClubSummary } from '@runturf/shared';
 import { and, asc, count, desc, eq, gte, ilike, inArray, or } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import {
@@ -12,14 +12,6 @@ import {
 } from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../errors.js';
 import { toPublic } from './auth.js';
-
-function isoWeekStart(now = new Date()): Date {
-  const start = new Date(now);
-  const day = (start.getUTCDay() + 6) % 7;
-  start.setUTCDate(start.getUTCDate() - day);
-  start.setUTCHours(0, 0, 0, 0);
-  return start;
-}
 
 async function myMembership(userId: string) {
   return db.query.clubMembers.findFirst({ where: eq(clubMembers.userId, userId) });

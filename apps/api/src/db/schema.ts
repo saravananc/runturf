@@ -192,7 +192,8 @@ export const clubMessages = pgTable(
 
 export const challenges = pgTable('challenges', {
   id: uuid('id').primaryKey().defaultRandom(),
-  code: text('code').notNull(),
+  // Unique so weekly generation is idempotent (template slug + week tag).
+  code: text('code').notNull().unique(),
   title: text('title').notNull(),
   description: text('description').notNull(),
   metric: text('metric').notNull(), // 'distance_m' | 'cells_captured'

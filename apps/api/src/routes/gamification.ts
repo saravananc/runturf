@@ -1,5 +1,5 @@
 import type { Challenge, UnlockedAchievement } from '@runturf/shared';
-import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { Router } from 'express';
 import { db } from '../db/client.js';
 import {
@@ -12,6 +12,7 @@ import {
 import { notFound } from '../errors.js';
 import { h, idParam, requireAuth } from '../middleware.js';
 import { toPublic } from '../services/auth.js';
+import { listActiveChallenges } from '../services/challenges.js';
 
 export const achievementsRouter = Router();
 achievementsRouter.use(requireAuth);
@@ -53,11 +54,8 @@ challengesRouter.use(requireAuth);
 challengesRouter.get(
   '/',
   h(async (req, res) => {
-    const now = new Date();
-    const active = await db.query.challenges.findMany({
-      where: and(lte(challenges.startsAt, now), gte(challenges.endsAt, now)),
-      orderBy: [asc(challenges.endsAt)],
-    });
+    // Generates the current week's challenges if the last set has rolled over.
+    const active = await listActiveChallenges();
     const mine = await db.query.challengeParticipants.findMany({
       where: eq(challengeParticipants.userId, req.userId),
     });

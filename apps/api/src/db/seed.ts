@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
+import { ensureWeeklyChallenges } from '../services/challenges.js';
 import { db, pool } from './client.js';
-import { achievements, challenges, users, userStats } from './schema.js';
+import { achievements, users, userStats } from './schema.js';
 
 const ACHIEVEMENTS = [
   { code: 'first_run', title: 'First Steps', description: 'Complete your first run', icon: '👟', xpReward: 50, sortOrder: 1 },
@@ -18,48 +19,11 @@ const ACHIEVEMENTS = [
   { code: 'level_5', title: 'Rising Star', description: 'Reach level 5', icon: '⭐', xpReward: 0, sortOrder: 12 },
 ];
 
-function weekBounds(now = new Date()): { start: Date; end: Date } {
-  const start = new Date(now);
-  const day = (start.getUTCDay() + 6) % 7; // Monday = 0
-  start.setUTCDate(start.getUTCDate() - day);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 7);
-  return { start, end };
-}
-
 async function main() {
   await db.insert(achievements).values(ACHIEVEMENTS).onConflictDoNothing();
 
-  const { start, end } = weekBounds();
-  const weekTag = start.toISOString().slice(0, 10);
-  await db
-    .insert(challenges)
-    .values([
-      {
-        code: `weekly_distance_${weekTag}`,
-        title: 'Weekly 15K',
-        description: 'Run a total of 15 km this week',
-        metric: 'distance_m',
-        target: 15000,
-        startsAt: start,
-        endsAt: end,
-        coinReward: 50,
-        xpReward: 200,
-      },
-      {
-        code: `weekly_cells_${weekTag}`,
-        title: 'Turf War',
-        description: 'Capture 25 cells this week',
-        metric: 'cells_captured',
-        target: 25,
-        startsAt: start,
-        endsAt: end,
-        coinReward: 75,
-        xpReward: 250,
-      },
-    ])
-    .onConflictDoNothing();
+  // Same generator the API uses at runtime, so seed and runtime never diverge.
+  await ensureWeeklyChallenges();
 
   const demoUsers = [
     { username: 'demo', displayName: 'Demo Runner', color: '#3b82f6' },

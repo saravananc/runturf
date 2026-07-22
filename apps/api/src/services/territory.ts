@@ -2,6 +2,7 @@ import {
   cellsInBBox,
   cellsOnPath,
   cellToPolygon,
+  isoWeekStart,
   TERRITORY_ZOOM,
   type BBox,
   type LatLng,
@@ -160,14 +161,6 @@ export async function territoryInBBox(bbox: BBox): Promise<GeoJSONFC> {
 interface GeoJSONFC {
   type: 'FeatureCollection';
   features: unknown[];
-}
-
-function isoWeekStart(now = new Date()): Date {
-  const start = new Date(now);
-  const day = (start.getUTCDay() + 6) % 7;
-  start.setUTCDate(start.getUTCDate() - day);
-  start.setUTCHours(0, 0, 0, 0);
-  return start;
 }
 
 export async function territoryLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
