@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgis/postgis:16-3.4
+    # Plain Postgres: the territory grid uses integer slippy-tile coordinates,
+    # not geometry columns, so PostGIS was never used. Pinned to bullseye to
+    # match the glibc/collation of the previous image.
+    image: postgres:16-bullseye
     container_name: runturf-db
     environment:
       POSTGRES_USER: runturf

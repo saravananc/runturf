@@ -3,6 +3,23 @@
 > Evidence-based codebase review. Every finding cites the file(s) it was verified in.
 > Generated against commit `32ae0bf` (branch `main`).
 >
+> ## ⚠️ Status update — roadmap items 1–4 have since been completed
+>
+> This report describes the codebase **as of `32ae0bf`**. The following have been
+> fixed since; the findings below are retained as the historical record.
+>
+> | Roadmap item | Status | Commit |
+> |---|---|---|
+> | 1. Production hardening (logout revocation, helmet, rate limiting, token cleanup) | ✅ Done | `35f726e` |
+> | 2. Pause-clock and backdated-streak bugs (Bugs #1, #2) | ✅ Done | `08608d5` |
+> | 3. Weekly challenge lifecycle | ✅ Done | `600dbd3` |
+> | 4. Profile editing UI + `pino-http` wiring | ✅ Done | `5687af1` |
+> | Tech debt: PostGIS swapped for plain Postgres; week helper extracted to shared | ✅ Done | this commit |
+>
+> **Still open:** mobile feature parity, web/mobile test coverage, mobile in CI,
+> deployment (no API Dockerfile), demo accounts in the production seed, and the
+> unstarted breadth features (push, offline, coin shop, club invites/moderation).
+>
 > **Note on scope:** the backlog's 405 task names are placeholders (e.g. "Login Task 1"),
 > so "intended architecture" is inferred from the epic/feature names plus the agreed build
 > plan. Completion is reported against **two yardsticks** because a single number would mislead.

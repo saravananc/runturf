@@ -12,10 +12,10 @@ Built from the product backlog in [`backlog/`](backlog/) (11 Excel files, 10 epi
 | Path | What |
 |---|---|
 | `packages/shared` | TypeScript grid math (slippy-tile territory cells), XP/level economy, API types |
-| `apps/api` | Express 5 + TypeScript + Drizzle ORM + PostgreSQL/PostGIS backend |
+| `apps/api` | Express 5 + TypeScript + Drizzle ORM + PostgreSQL backend |
 | `apps/web` | React + Vite + MapLibre GL web app (PWA) |
 | `apps/mobile` | Expo (React Native) mobile scaffold |
-| `docker-compose.yml` | PostGIS 16 database |
+| `docker-compose.yml` | PostgreSQL 16 database (host port 5433) |
 
 ## Getting started
 
