@@ -1,5 +1,22 @@
 /** API contract types shared by server and clients. */
 
+/**
+ * Territory/avatar colours a runner can be assigned or choose.
+ * Shared so the server's random pick and the client's picker stay in sync.
+ */
+export const USER_COLORS = [
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f43f5e',
+  '#06b6d4',
+] as const;
+
 export interface UserPublic {
   id: string;
   username: string;

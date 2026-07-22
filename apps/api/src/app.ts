@@ -2,7 +2,9 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import pinoHttp from 'pino-http';
 import { config } from './config.js';
+import { logger } from './logger.js';
 import { errorHandler } from './middleware.js';
 import { authRouter } from './routes/auth.js';
 import { clubsRouter } from './routes/clubs.js';
@@ -43,6 +45,24 @@ export function createApp() {
   // Trust the reverse proxy so rate limiting keys on the real client IP in production.
   if (config.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.use(helmet());
+  // Request logging. Quiet in tests, and health checks are noise at any level.
+  if (config.NODE_ENV !== 'test') {
+    app.use(
+      pinoHttp({
+        logger,
+        autoLogging: { ignore: (req) => req.url === '/health' },
+        // Never let a bearer token or password reach the logs.
+        redact: ['req.headers.authorization', 'req.body.password', 'req.body.refreshToken'],
+        // One concise line per request; full headers are noise at every level.
+        serializers: {
+          req: (req) => ({ method: req.method, url: req.url }),
+          res: (res) => ({ status: res.statusCode }),
+        },
+        customLogLevel: (_req, res, err) =>
+          err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info',
+      }),
+    );
+  }
   app.use(cors({ origin: config.CORS_ORIGIN.split(',') }));
   app.use(express.json({ limit: '10mb' })); // run point arrays can be large
   app.use(globalLimiter);

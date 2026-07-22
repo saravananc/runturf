@@ -1,7 +1,9 @@
 import type { AchievementDef, UnlockedAchievement, UserStats } from '@runturf/shared';
 import { levelProgress } from '@runturf/shared';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { EditProfileModal } from '../components/EditProfileModal';
 import { get } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { CoinIcon, FlagIcon, FlameIcon, MapIcon, RouteIcon, TargetIcon } from '../components/icons';
@@ -9,7 +11,8 @@ import { Avatar, ProgressRing, SectionHeading, StatTile } from '../components/ui
 import { formatDistance } from '../record/recorder';
 
 export function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
+  const [editing, setEditing] = useState(false);
   const { data: stats } = useQuery({
     queryKey: ['stats'],
     queryFn: () => get<UserStats>('/users/me/stats'),
@@ -34,10 +37,22 @@ export function ProfilePage() {
           <h1 className="text-[19px] font-extrabold break-words text-ink">{user?.displayName}</h1>
           <p className="text-[13px] text-ink-2">@{user?.username}</p>
         </div>
-        <button onClick={logout} className="btn btn-ghost px-3.5 py-2 text-[13px]">
-          Sign out
-        </button>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button
+            onClick={() => setEditing(true)}
+            className="btn btn-ghost px-3.5 py-2 text-[13px]"
+          >
+            Edit
+          </button>
+          <button onClick={logout} className="btn btn-ghost px-3.5 py-2 text-[13px]">
+            Sign out
+          </button>
+        </div>
       </div>
+
+      {editing && user && (
+        <EditProfileModal user={user} onSaved={setUser} onClose={() => setEditing(false)} />
+      )}
 
       {stats && lp && (
         <>

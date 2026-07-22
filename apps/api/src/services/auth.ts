@@ -1,4 +1,4 @@
-import type { AuthResponse, UserPublic } from '@runturf/shared';
+import { USER_COLORS, type AuthResponse, type UserPublic } from '@runturf/shared';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { and, eq, lt } from 'drizzle-orm';
@@ -7,11 +7,6 @@ import { ACCESS_TOKEN_TTL, config, REFRESH_TOKEN_TTL_DAYS } from '../config.js';
 import { db } from '../db/client.js';
 import { refreshTokens, users, userStats } from '../db/schema.js';
 import { badRequest, conflict, unauthorized } from '../errors.js';
-
-const USER_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#06b6d4',
-];
 
 export function toPublic(u: typeof users.$inferSelect): UserPublic {
   return {
