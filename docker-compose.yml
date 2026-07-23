@@ -20,5 +20,27 @@ services:
       timeout: 5s
       retries: 12
 
+  # Containerised API. Opt-in via a profile so the default `docker compose up`
+  # stays DB-only (local dev runs the API on the host with `npm run dev:api`).
+  # Run the full stack with: docker compose --profile app up --build
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: runturf-api
+    environment:
+      # Reaches the db service over the compose network on the container port.
+      DATABASE_URL: postgres://runturf:runturf_dev@db:5432/runturf
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production-3f9a2b}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      NODE_ENV: production
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   runturf_pgdata:

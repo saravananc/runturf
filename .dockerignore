@@ -1,0 +1,22 @@
+# Keep the build context small and, above all, keep secrets and installed
+# dependencies out of the image.
+**/node_modules
+**/dist
+**/.expo
+**/coverage
+.git
+.github
+*.log
+
+# Secrets — never bake env files into the image.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Not needed by the API image.
+apps/mobile
+apps/web/src
+apps/web/public
+backlog
+*.md
+PROJECT_ASSESSMENT.md

@@ -14,11 +14,15 @@
 > | 2. Pause-clock and backdated-streak bugs (Bugs #1, #2) | ✅ Done | `08608d5` |
 > | 3. Weekly challenge lifecycle | ✅ Done | `600dbd3` |
 > | 4. Profile editing UI + `pino-http` wiring | ✅ Done | `5687af1` |
-> | Tech debt: PostGIS swapped for plain Postgres; week helper extracted to shared | ✅ Done | this commit |
+> | Tech debt: PostGIS swapped for plain Postgres; week helper extracted to shared | ✅ Done | `cfc951c` |
+> | 4.5 Mobile feature parity + mobile in CI | ✅ Done | `d9fb077` |
+> | 5. Web test coverage (Vitest + RTL) | ✅ Done | `cace6af` |
+> | 6. Deployment (API Dockerfile, prod-safe seed, compose profile, docs) | ✅ Done | this commit |
 >
-> **Still open:** mobile feature parity, web/mobile test coverage, mobile in CI,
-> deployment (no API Dockerfile), demo accounts in the production seed, and the
-> unstarted breadth features (push, offline, coin shop, club invites/moderation).
+> **Still open (breadth, roadmap item 7):** push notifications, background mobile
+> tracking, offline maps, GPX import, coin shop, club invites/moderation, and
+> app-store release. The core product is now feature-complete on both clients,
+> tested (99 tests), and container-deployable.
 >
 > **Note on scope:** the backlog's 405 task names are placeholders (e.g. "Login Task 1"),
 > so "intended architecture" is inferred from the epic/feature names plus the agreed build

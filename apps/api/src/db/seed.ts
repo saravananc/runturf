@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
+import { config } from '../config.js';
 import { ensureWeeklyChallenges } from '../services/challenges.js';
 import { db, pool } from './client.js';
 import { achievements, users, userStats } from './schema.js';
@@ -19,12 +20,29 @@ const ACHIEVEMENTS = [
   { code: 'level_5', title: 'Rising Star', description: 'Reach level 5', icon: '⭐', xpReward: 0, sortOrder: 12 },
 ];
 
-async function main() {
-  await db.insert(achievements).values(ACHIEVEMENTS).onConflictDoNothing();
+/**
+ * Whether to seed the demo/rival accounts (which share the well-known password
+ * `demo1234`). They must never exist in production unless explicitly opted in.
+ * `SEED_DEMO` overrides in either direction; otherwise demo data is dev-only.
+ */
+export function shouldSeedDemoUsers(env: {
+  NODE_ENV: string;
+  SEED_DEMO?: string;
+}): boolean {
+  if (env.SEED_DEMO === 'true') return true;
+  if (env.SEED_DEMO === 'false') return false;
+  return env.NODE_ENV !== 'production';
+}
 
+/** Reference data every environment needs: achievements + this week's challenges. */
+export async function seedReferenceData(): Promise<void> {
+  await db.insert(achievements).values(ACHIEVEMENTS).onConflictDoNothing();
   // Same generator the API uses at runtime, so seed and runtime never diverge.
   await ensureWeeklyChallenges();
+}
 
+/** Demo accounts for local development and previews only. */
+export async function seedDemoUsers(): Promise<void> {
   const demoUsers = [
     { username: 'demo', displayName: 'Demo Runner', color: '#3b82f6' },
     { username: 'rival', displayName: 'Rival Runner', color: '#ef4444' },
@@ -38,6 +56,20 @@ async function main() {
       .returning();
     if (row) await db.insert(userStats).values({ userId: row.id }).onConflictDoNothing();
   }
+}
+
+async function main() {
+  await seedReferenceData();
+
+  const seedDemo = shouldSeedDemoUsers({
+    NODE_ENV: config.NODE_ENV,
+    SEED_DEMO: process.env.SEED_DEMO,
+  });
+  if (seedDemo) {
+    await seedDemoUsers();
+  } else {
+    console.log('Skipping demo accounts (production, or SEED_DEMO=false).');
+  }
 
   const counts = await db.execute(
     sql`SELECT (SELECT count(*) FROM achievements) AS achievements,
@@ -48,7 +80,10 @@ async function main() {
   await pool.end();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run when invoked directly (not when imported by tests).
+if (process.argv[1]?.endsWith('seed.ts') || process.argv[1]?.endsWith('seed.js')) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
