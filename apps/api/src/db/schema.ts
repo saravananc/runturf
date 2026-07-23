@@ -190,6 +190,30 @@ export const clubMessages = pgTable(
   (t) => [index('club_messages_club_time_idx').on(t.clubId, t.createdAt)],
 );
 
+export const shopItems = pgTable('shop_items', {
+  code: text('code').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').notNull().default('🎁'),
+  cost: integer('cost').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+export const userItems = pgTable(
+  'user_items',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    code: text('code')
+      .notNull()
+      .references(() => shopItems.code, { onDelete: 'cascade' }),
+    // Unused consumables the runner is holding.
+    quantity: integer('quantity').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.code] })],
+);
+
 export const challenges = pgTable('challenges', {
   id: uuid('id').primaryKey().defaultRandom(),
   // Unique so weekly generation is idempotent (template slug + week tag).

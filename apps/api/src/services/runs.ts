@@ -99,6 +99,7 @@ export async function submitRun(
     newAchievements: rewards.newAchievements,
     stats: await getUserStats(userId),
     personalBests,
+    perksApplied: rewards.perksApplied,
   };
 }
 

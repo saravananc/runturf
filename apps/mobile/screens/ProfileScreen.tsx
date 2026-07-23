@@ -140,6 +140,12 @@ export function ProfileScreen({ navigation }: { navigation: NavigationProp<never
         </>
       )}
 
+      <Card style={s.linkCard} onPress={() => navigation.navigate('Shop' as never)}>
+        <Text style={s.linkText}>🪙  Shop</Text>
+        {stats && <Text style={s.linkCoins}>{stats.coins} 🪙</Text>}
+        <Text style={s.linkArrow}>→</Text>
+      </Card>
+
       <Card style={s.linkCard} onPress={() => navigation.navigate('Challenges' as never)}>
         <Text style={s.linkText}>🎯  Weekly challenges</Text>
         <Text style={s.linkArrow}>→</Text>
@@ -284,7 +290,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  linkText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
+  linkText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink, flex: 1 },
+  linkCoins: { fontFamily: font.bold, fontSize: type.small, color: colors.gold, marginRight: space(2) },
   linkArrow: { color: colors.ink3, fontSize: 16 },
   badgeCount: { fontFamily: font.semibold, fontSize: type.caption, color: colors.ink3 },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2.5) },

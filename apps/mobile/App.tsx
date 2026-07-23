@@ -19,6 +19,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { MapScreen } from './screens/MapScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { RecordScreen } from './screens/RecordScreen';
+import { ShopScreen } from './screens/ShopScreen';
 import { SocialScreen } from './screens/SocialScreen';
 import { colors, font } from './theme';
 
@@ -33,6 +34,7 @@ const TAB_ICON: Record<string, string> = {
   Rank: '🏆',
   Profile: '👤',
   Challenges: '🎯',
+  Shop: '🪙',
 };
 
 const navTheme = {
@@ -78,6 +80,11 @@ function Tabs() {
       <Tab.Screen
         name="Challenges"
         component={ChallengesScreen}
+        options={{ tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tab.Screen
+        name="Shop"
+        component={ShopScreen}
         options={{ tabBarItemStyle: { display: 'none' } }}
       />
     </Tab.Navigator>

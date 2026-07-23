@@ -8,6 +8,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { MapPage } from './pages/MapPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecordPage } from './pages/RecordPage';
+import { ShopPage } from './pages/ShopPage';
 import { SocialPage } from './pages/SocialPage';
 
 export function App() {
@@ -36,6 +37,7 @@ export function App() {
         <Route path="/social" element={<SocialPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/challenges" element={<ChallengesPage />} />
+        <Route path="/shop" element={<ShopPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

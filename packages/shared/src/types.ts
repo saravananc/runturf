@@ -87,6 +87,28 @@ export interface RunReport {
   newAchievements: AchievementDef[];
   stats: UserStats;
   personalBests: string[];
+  /** Consumables auto-applied during this run, e.g. "2× XP Boost". */
+  perksApplied: string[];
+}
+
+export interface ShopItem {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  cost: number;
+  /** How many the current user is holding. */
+  owned: number;
+}
+
+export interface ShopView {
+  coins: number;
+  items: ShopItem[];
+}
+
+export interface PurchaseResult {
+  coins: number;
+  item: ShopItem;
 }
 
 export interface TerritoryCellFeatureProps {

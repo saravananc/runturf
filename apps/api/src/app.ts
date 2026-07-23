@@ -14,6 +14,7 @@ import {
   myAchievementsRouter,
 } from './routes/gamification.js';
 import { runsRouter } from './routes/runs.js';
+import { shopRouter } from './routes/shop.js';
 import { socialRouter } from './routes/social.js';
 import { territoryRouter } from './routes/territory.js';
 import { usersRouter } from './routes/users.js';
@@ -82,6 +83,7 @@ export function createApp() {
   app.use('/challenges', challengesRouter);
   app.use('/social', socialRouter);
   app.use('/clubs', clubsRouter);
+  app.use('/shop', shopRouter);
 
   app.use(errorHandler);
   return app;

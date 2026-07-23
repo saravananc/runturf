@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { config } from '../config.js';
 import { ensureWeeklyChallenges } from '../services/challenges.js';
 import { db, pool } from './client.js';
-import { achievements, users, userStats } from './schema.js';
+import { achievements, shopItems, users, userStats } from './schema.js';
 
 const ACHIEVEMENTS = [
   { code: 'first_run', title: 'First Steps', description: 'Complete your first run', icon: '👟', xpReward: 50, sortOrder: 1 },
@@ -34,9 +34,29 @@ export function shouldSeedDemoUsers(env: {
   return env.NODE_ENV !== 'production';
 }
 
-/** Reference data every environment needs: achievements + this week's challenges. */
+const SHOP_ITEMS = [
+  {
+    code: 'xp_boost',
+    name: 'XP Boost',
+    description: 'Double the XP earned on your next run',
+    icon: '⚡',
+    cost: 50,
+    sortOrder: 1,
+  },
+  {
+    code: 'streak_freeze',
+    name: 'Streak Freeze',
+    description: 'Save your streak if you miss a day',
+    icon: '🧊',
+    cost: 75,
+    sortOrder: 2,
+  },
+];
+
+/** Reference data every environment needs: achievements, shop items, challenges. */
 export async function seedReferenceData(): Promise<void> {
   await db.insert(achievements).values(ACHIEVEMENTS).onConflictDoNothing();
+  await db.insert(shopItems).values(SHOP_ITEMS).onConflictDoNothing();
   // Same generator the API uses at runtime, so seed and runtime never diverge.
   await ensureWeeklyChallenges();
 }

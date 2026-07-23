@@ -14,6 +14,7 @@ import {
   userAchievements,
   userStats,
 } from '../db/schema.js';
+import { consumePerk, PERK } from './shop.js';
 import type { CaptureResult } from './territory.js';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -23,6 +24,8 @@ export interface RewardResult {
   coinsGained: number;
   newAchievements: AchievementDef[];
   streakDays: number;
+  /** Consumables applied this run, e.g. "2× XP Boost". */
+  perksApplied: string[];
 }
 
 const dateKey = (d: Date) => d.toISOString().slice(0, 10); // UTC day for MVP
@@ -36,20 +39,26 @@ function computeStreak(
   lastRunDate: string | null,
   runDay: string,
   currentStreak: number,
-): { streakDays: number; lastRunDate: string } {
-  if (!lastRunDate) return { streakDays: 1, lastRunDate: runDay };
+): { streakDays: number; lastRunDate: string; broke: boolean } {
+  if (!lastRunDate) return { streakDays: 1, lastRunDate: runDay, broke: false };
   if (runDay === lastRunDate) {
     // Another run the same day: streak unchanged (but never below 1).
-    return { streakDays: Math.max(currentStreak, 1), lastRunDate };
+    return { streakDays: Math.max(currentStreak, 1), lastRunDate, broke: false };
   }
   if (runDay < lastRunDate) {
     // Backdated run: keep the more recent state intact.
-    return { streakDays: Math.max(currentStreak, 1), lastRunDate };
+    return { streakDays: Math.max(currentStreak, 1), lastRunDate, broke: false };
   }
   const dayAfterLast = new Date(`${lastRunDate}T00:00:00Z`);
   dayAfterLast.setUTCDate(dayAfterLast.getUTCDate() + 1);
   const consecutive = dateKey(dayAfterLast) === runDay;
-  return { streakDays: consecutive ? currentStreak + 1 : 1, lastRunDate: runDay };
+  // `broke` = a gap that would reset a previously-active streak (a Streak Freeze
+  // can cancel this).
+  return {
+    streakDays: consecutive ? currentStreak + 1 : 1,
+    lastRunDate: runDay,
+    broke: !consecutive && currentStreak > 1,
+  };
 }
 
 /**
@@ -65,13 +74,20 @@ export async function applyRunRewards(
   const stats = await tx.query.userStats.findFirst({ where: eq(userStats.userId, userId) });
   if (!stats) throw new Error('user_stats row missing');
 
+  const perksApplied: string[] = [];
+
   // Streak (computed against UTC days; timezone support deferred)
   const runDay = dateKey(run.startedAt);
-  const { streakDays, lastRunDate } = computeStreak(
-    stats.lastRunDate,
-    runDay,
-    stats.streakDays,
-  );
+  const streak = computeStreak(stats.lastRunDate, runDay, stats.streakDays);
+  let streakDays = streak.streakDays;
+  let lastRunDate = streak.lastRunDate;
+
+  // A held Streak Freeze cancels a broken streak, continuing it across the gap.
+  if (streak.broke && (await consumePerk(tx, userId, PERK.streakFreeze))) {
+    streakDays = stats.streakDays + 1;
+    lastRunDate = runDay;
+    perksApplied.push('Streak Freeze');
+  }
 
   let xpGained = runXp({
     distanceM: run.distanceM,
@@ -79,6 +95,14 @@ export async function applyRunRewards(
     stolenCells: capture.stolenCells,
     streakDays,
   });
+
+  // A held XP Boost doubles the run's earned XP (achievement/challenge bonuses
+  // are added afterwards, undoubled).
+  if (await consumePerk(tx, userId, PERK.xpBoost)) {
+    xpGained *= 2;
+    perksApplied.push('2× XP Boost');
+  }
+
   let coinsGained = runCoins(capture);
 
   // Base stats update (before achievements so predicates see fresh totals)
@@ -196,7 +220,7 @@ export async function applyRunRewards(
     })
     .where(eq(userStats.userId, userId));
 
-  return { xpGained, coinsGained, newAchievements, streakDays };
+  return { xpGained, coinsGained, newAchievements, streakDays, perksApplied };
 }
 
 interface AchievementCtx {

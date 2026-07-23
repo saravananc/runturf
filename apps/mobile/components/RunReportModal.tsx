@@ -32,6 +32,12 @@ export function RunReportModal({
               <Cell label="Streak" value={`${stats.streakDays}d`} color={colors.ember} />
             </View>
 
+            {report.perksApplied.length > 0 && (
+              <View style={s.perk}>
+                <Text style={s.perkText}>✨ Perk applied — {report.perksApplied.join(', ')}</Text>
+              </View>
+            )}
+
             {report.personalBests.length > 0 && (
               <View style={s.pb}>
                 <Text style={s.pbText}>
@@ -124,6 +130,13 @@ const s = StyleSheet.create({
     marginTop: space(4),
   },
   pbText: { fontFamily: font.bold, fontSize: type.small, color: colors.volt, textAlign: 'center' },
+  perk: {
+    backgroundColor: 'rgba(255,197,61,0.10)',
+    borderRadius: radius.ctl,
+    padding: space(3),
+    marginTop: space(4),
+  },
+  perkText: { fontFamily: font.bold, fontSize: type.small, color: colors.gold, textAlign: 'center' },
   achieve: {
     flexDirection: 'row',
     alignItems: 'center',

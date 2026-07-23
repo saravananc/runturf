@@ -94,6 +94,18 @@ export function ProfilePage() {
         </>
       )}
 
+      <Link
+        to="/shop"
+        className="card mt-2.5 flex items-center gap-3 p-4 transition-colors hover:bg-elev2"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/15 text-gold">
+          <CoinIcon size={18} />
+        </span>
+        <span className="flex-1 text-[14px] font-bold text-ink">Shop</span>
+        {stats && <span className="text-[13px] font-bold text-gold">{stats.coins} 🪙</span>}
+        <span className="text-ink-3">→</span>
+      </Link>
+
       <Link to="/challenges" className="card mt-2.5 flex items-center gap-3 p-4 transition-colors hover:bg-elev2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-grape/15 text-grape">
           <TargetIcon size={18} />

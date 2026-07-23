@@ -66,6 +66,15 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
           />
         </div>
 
+        {report.perksApplied.length > 0 && (
+          <div
+            className="anim-rise mt-4 rounded-xl bg-gold/10 px-4 py-2.5 text-center text-[13px] font-bold text-gold"
+            style={{ animationDelay: '0.52s' }}
+          >
+            ✨ Perk applied — {report.perksApplied.join(', ')}
+          </div>
+        )}
+
         {report.personalBests.length > 0 && (
           <div
             className="anim-rise mt-4 rounded-xl bg-volt/10 px-4 py-2.5 text-center text-[13px] font-bold text-volt"
