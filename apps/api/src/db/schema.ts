@@ -174,6 +174,28 @@ export const clubMembers = pgTable(
   ],
 );
 
+export const clubInvites = pgTable(
+  'club_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clubId: uuid('club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    inviterId: uuid('inviter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    inviteeId: uuid('invitee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // At most one pending invite per club/invitee pair.
+    uniqueIndex('club_invites_pair_idx').on(t.clubId, t.inviteeId),
+    index('club_invites_invitee_idx').on(t.inviteeId),
+  ],
+);
+
 export const clubMessages = pgTable(
   'club_messages',
   {

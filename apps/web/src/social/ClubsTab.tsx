@@ -1,7 +1,7 @@
-import type { ClubDetail, ClubMessage, ClubSummary } from '@runturf/shared';
+import type { ClubDetail, ClubInvite, ClubMessage, ClubSummary } from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { get, post } from '../api/client';
+import { del, get, post } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { CrownIcon, FlagIcon, ShieldIcon } from '../components/icons';
 import { Avatar, EmptyState, SectionHeading } from '../components/ui';
@@ -30,9 +30,28 @@ function ClubBadge({ club, size = 44 }: { club: { tag: string; color: string }; 
 
 function MyClub({ club }: { club: ClubDetail }) {
   const qc = useQueryClient();
-  const leave = useMutation({
-    mutationFn: () => post('/clubs/leave'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myClub'] }),
+  const { user } = useAuth();
+  const isOwner = club.myRole === 'owner';
+  const [invite, setInvite] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ['myClub'] });
+  const leave = useMutation({ mutationFn: () => post('/clubs/leave'), onSuccess: refresh });
+  const inviteMut = useMutation({
+    mutationFn: (username: string) => post(`/clubs/${club.id}/invites`, { username }),
+    onSuccess: () => {
+      setNotice('Invite sent!');
+      setInvite('');
+    },
+    onError: (e) => setNotice(e instanceof Error ? e.message : 'Could not invite'),
+  });
+  const kick = useMutation({
+    mutationFn: (userId: string) => del(`/clubs/${club.id}/members/${userId}`),
+    onSuccess: refresh,
+  });
+  const transfer = useMutation({
+    mutationFn: (userId: string) => post(`/clubs/${club.id}/transfer`, { userId }),
+    onSuccess: refresh,
   });
 
   return (
@@ -61,27 +80,84 @@ function MyClub({ club }: { club: ClubDetail }) {
         </div>
       </div>
 
+      {isOwner && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (invite.trim()) inviteMut.mutate(invite.trim());
+          }}
+          className="card p-3"
+        >
+          <SectionHeading>Invite a runner</SectionHeading>
+          <div className="flex gap-2">
+            <input
+              className="input flex-1 py-2 text-[13px]"
+              placeholder="Username"
+              value={invite}
+              onChange={(e) => {
+                setInvite(e.target.value);
+                setNotice('');
+              }}
+            />
+            <button
+              disabled={inviteMut.isPending || !invite.trim()}
+              className="btn btn-primary px-4 py-2 text-[13px]"
+            >
+              Invite
+            </button>
+          </div>
+          {notice && <p className="mt-2 text-[12px] font-semibold text-volt">{notice}</p>}
+        </form>
+      )}
+
       <ClubChat clubId={club.id} />
 
       <section>
         <SectionHeading>Members</SectionHeading>
         <div className="space-y-2.5">
-          {club.members.map((m) => (
-            <div key={m.id} className="card flex items-center gap-3 p-3">
-              <Avatar user={m} size={34} />
-              <div className="min-w-0 flex-1">
-                <span className="text-[14px] font-bold text-ink">{m.displayName}</span>
-                {m.role === 'owner' && (
-                  <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-bold text-gold">
-                    <CrownIcon size={14} /> owner
+          {club.members.map((m) => {
+            const isSelf = m.id === user?.id;
+            const canModerate = isOwner && !isSelf;
+            return (
+              <div key={m.id} className="card flex items-center gap-3 p-3">
+                <Avatar user={m} size={34} />
+                <div className="min-w-0 flex-1">
+                  <span className="text-[14px] font-bold text-ink">{m.displayName}</span>
+                  {m.role === 'owner' && (
+                    <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-bold text-gold">
+                      <CrownIcon size={14} /> owner
+                    </span>
+                  )}
+                  <div className="text-[12px] text-ink-3">
+                    Lv {m.level} · {m.cellsOwned} cells
+                  </div>
+                </div>
+                {canModerate ? (
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      onClick={() => transfer.mutate(m.id)}
+                      disabled={transfer.isPending}
+                      title="Make owner"
+                      className="btn btn-ghost px-2.5 py-1.5 text-[12px] text-gold"
+                    >
+                      <CrownIcon size={14} />
+                    </button>
+                    <button
+                      onClick={() => kick.mutate(m.id)}
+                      disabled={kick.isPending}
+                      className="btn btn-danger-soft px-2.5 py-1.5 text-[12px]"
+                    >
+                      Kick
+                    </button>
+                  </div>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink-2">
+                    <FlagIcon size={12} className="text-volt" /> {m.cellsOwned}
                   </span>
                 )}
               </div>
-              <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink-2">
-                Lv {m.level} · <FlagIcon size={12} className="text-volt" /> {m.cellsOwned}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </div>
@@ -180,18 +256,66 @@ function BrowseClubs() {
     queryFn: () => get<ClubSummary[]>('/clubs'),
   });
 
+  const invites = useQuery({
+    queryKey: ['clubInvites'],
+    queryFn: () => get<ClubInvite[]>('/clubs/invites'),
+    refetchInterval: 30_000,
+  });
+
+  const refreshClub = () => {
+    qc.invalidateQueries({ queryKey: ['myClub'] });
+    qc.invalidateQueries({ queryKey: ['clubInvites'] });
+  };
   const join = useMutation({
     mutationFn: (id: string) => post(`/clubs/${id}/join`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myClub'] }),
+    onSuccess: refreshClub,
+  });
+  const respondInvite = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) =>
+      post(`/clubs/invites/${id}/${action}`),
+    onSuccess: refreshClub,
   });
   const create = useMutation({
     mutationFn: () => post<ClubDetail>('/clubs', { name, tag }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['myClub'] }),
+    onSuccess: refreshClub,
     onError: (e) => setError(e instanceof Error ? e.message : 'Failed to create club'),
   });
 
   return (
     <div className="space-y-4">
+      {invites.data && invites.data.length > 0 && (
+        <section>
+          <SectionHeading>Invites</SectionHeading>
+          <div className="space-y-2.5">
+            {invites.data.map((inv) => (
+              <div key={inv.id} className="card flex items-center gap-3 border-volt/30 bg-volt/5 p-3">
+                <ClubBadge club={inv.club} size={40} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-bold text-ink">{inv.club.name}</div>
+                  <div className="text-[12px] text-ink-3">
+                    Invited by {inv.inviter.displayName}
+                  </div>
+                </div>
+                <button
+                  onClick={() => respondInvite.mutate({ id: inv.id, action: 'accept' })}
+                  disabled={respondInvite.isPending}
+                  className="btn btn-primary px-3.5 py-1.5 text-[13px]"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => respondInvite.mutate({ id: inv.id, action: 'decline' })}
+                  disabled={respondInvite.isPending}
+                  className="btn btn-ghost px-3 py-1.5 text-[13px]"
+                >
+                  Decline
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {creating ? (
         <form
           onSubmit={(e) => {

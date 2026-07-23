@@ -172,6 +172,13 @@ export interface ClubDetail extends ClubSummary {
   myRole: 'owner' | 'member' | null;
 }
 
+export interface ClubInvite {
+  id: string;
+  club: ClubSummary;
+  inviter: UserPublic;
+  createdAt: string;
+}
+
 export interface ClubMessage {
   id: string;
   user: UserPublic;

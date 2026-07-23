@@ -1,8 +1,15 @@
-import { isoWeekStart, type ClubDetail, type ClubMessage, type ClubSummary } from '@runturf/shared';
+import {
+  isoWeekStart,
+  type ClubDetail,
+  type ClubInvite,
+  type ClubMessage,
+  type ClubSummary,
+} from '@runturf/shared';
 import { and, asc, count, desc, eq, gte, ilike, inArray, or } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import {
   cellCaptures,
+  clubInvites,
   clubMembers,
   clubMessages,
   clubs,
@@ -209,4 +216,116 @@ export async function postMessage(
     body: row.body,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/* ---------- invites & moderation (owner-only actions) ---------- */
+
+/** Throws unless `userId` owns `clubId`. */
+async function requireOwner(userId: string, clubId: string) {
+  const membership = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, userId)),
+  });
+  if (!membership || membership.role !== 'owner') throw forbidden('Only the club owner can do that');
+  return membership;
+}
+
+/** Owner invites a runner by username. Accept enforces the one-club rule. */
+export async function inviteToClub(
+  ownerId: string,
+  clubId: string,
+  username: string,
+): Promise<void> {
+  await requireOwner(ownerId, clubId);
+  const invitee = await db.query.users.findFirst({
+    where: eq(users.username, username.trim().toLowerCase()),
+  });
+  if (!invitee) throw notFound('User not found');
+  if (invitee.id === ownerId) throw badRequest('You are already in this club');
+
+  const alreadyMember = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, invitee.id)),
+  });
+  if (alreadyMember) throw conflict('They are already a member');
+
+  await db
+    .insert(clubInvites)
+    .values({ clubId, inviterId: ownerId, inviteeId: invitee.id })
+    .onConflictDoNothing({ target: [clubInvites.clubId, clubInvites.inviteeId] });
+}
+
+/** Pending club invites addressed to a user. */
+export async function listMyInvites(userId: string): Promise<ClubInvite[]> {
+  const rows = await db
+    .select({ invite: clubInvites, club: clubs, inviter: users })
+    .from(clubInvites)
+    .innerJoin(clubs, eq(clubs.id, clubInvites.clubId))
+    .innerJoin(users, eq(users.id, clubInvites.inviterId))
+    .where(eq(clubInvites.inviteeId, userId))
+    .orderBy(desc(clubInvites.createdAt));
+  if (rows.length === 0) return [];
+
+  const stats = await clubStats(rows.map((r) => r.club.id));
+  return rows.map((r) => ({
+    id: r.invite.id,
+    club: toSummary(r.club, stats),
+    inviter: toPublic(r.inviter),
+    createdAt: r.invite.createdAt.toISOString(),
+  }));
+}
+
+export async function respondToInvite(
+  userId: string,
+  inviteId: string,
+  accept: boolean,
+): Promise<void> {
+  const invite = await db.query.clubInvites.findFirst({ where: eq(clubInvites.id, inviteId) });
+  if (!invite || invite.inviteeId !== userId) throw notFound('Invite not found');
+  if (accept) {
+    // joinClub enforces "one club per user"; only clear the invite once joined.
+    await joinClub(userId, invite.clubId);
+  }
+  await db.delete(clubInvites).where(eq(clubInvites.id, inviteId));
+}
+
+/** Owner removes a member (cannot remove themselves — use leave). */
+export async function kickMember(
+  ownerId: string,
+  clubId: string,
+  targetId: string,
+): Promise<void> {
+  await requireOwner(ownerId, clubId);
+  if (targetId === ownerId) throw badRequest('Use “leave” to remove yourself');
+  const target = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, targetId)),
+  });
+  if (!target) throw notFound('Member not found');
+  await db
+    .delete(clubMembers)
+    .where(and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, targetId)));
+}
+
+/** Owner hands ownership to another member and becomes a member themselves. */
+export async function transferOwnership(
+  ownerId: string,
+  clubId: string,
+  targetId: string,
+): Promise<void> {
+  await requireOwner(ownerId, clubId);
+  if (targetId === ownerId) throw badRequest('You already own this club');
+  const target = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, targetId)),
+  });
+  if (!target) throw notFound('Member not found');
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(clubMembers)
+      .set({ role: 'owner' })
+      .where(and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, targetId)));
+    await tx
+      .update(clubMembers)
+      .set({ role: 'member' })
+      .where(and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, ownerId)));
+    await tx.update(clubs).set({ ownerId: targetId }).where(eq(clubs.id, clubId));
+  });
 }

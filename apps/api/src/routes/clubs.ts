@@ -5,11 +5,16 @@ import {
   createClub,
   getClub,
   getMyClub,
+  inviteToClub,
   joinClub,
+  kickMember,
   leaveClub,
   listClubs,
   listMessages,
+  listMyInvites,
   postMessage,
+  respondToInvite,
+  transferOwnership,
 } from '../services/clubs.js';
 
 export const clubsRouter = Router();
@@ -49,6 +54,31 @@ clubsRouter.get(
   }),
 );
 
+// Invite routes use fixed prefixes and MUST precede `/:id` so they are not
+// swallowed by the UUID param route.
+clubsRouter.get(
+  '/invites',
+  h(async (req, res) => {
+    res.json(await listMyInvites(req.userId));
+  }),
+);
+
+clubsRouter.post(
+  '/invites/:id/accept',
+  h(async (req, res) => {
+    await respondToInvite(req.userId, idParam(req.params.id), true);
+    res.json({ ok: true });
+  }),
+);
+
+clubsRouter.post(
+  '/invites/:id/decline',
+  h(async (req, res) => {
+    await respondToInvite(req.userId, idParam(req.params.id), false);
+    res.json({ ok: true });
+  }),
+);
+
 clubsRouter.get(
   '/:id',
   h(async (req, res) => {
@@ -84,5 +114,32 @@ clubsRouter.post(
   h(async (req, res) => {
     const { body } = parseBody(z.object({ body: z.string().min(1).max(500) }), req.body);
     res.status(201).json(await postMessage(req.userId, idParam(req.params.id), body));
+  }),
+);
+
+// Owner-only moderation.
+clubsRouter.post(
+  '/:id/invites',
+  h(async (req, res) => {
+    const { username } = parseBody(z.object({ username: z.string().min(3).max(24) }), req.body);
+    await inviteToClub(req.userId, idParam(req.params.id), username);
+    res.status(201).json({ ok: true });
+  }),
+);
+
+clubsRouter.delete(
+  '/:id/members/:userId',
+  h(async (req, res) => {
+    await kickMember(req.userId, idParam(req.params.id), idParam(req.params.userId));
+    res.status(204).end();
+  }),
+);
+
+clubsRouter.post(
+  '/:id/transfer',
+  h(async (req, res) => {
+    const { userId } = parseBody(z.object({ userId: z.string().uuid() }), req.body);
+    await transferOwnership(req.userId, idParam(req.params.id), userId);
+    res.json({ ok: true });
   }),
 );

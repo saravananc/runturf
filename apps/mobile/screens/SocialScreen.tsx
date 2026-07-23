@@ -1,5 +1,6 @@
 import type {
   ClubDetail,
+  ClubInvite,
   ClubMessage,
   ClubSummary,
   FeedItem,
@@ -361,10 +362,52 @@ function ClubsTab() {
 
 function MyClub({ club, onChanged }: { club: ClubDetail; onChanged: () => void }) {
   const { user } = useAuth();
+  const isOwner = club.myRole === 'owner';
   const [messages, setMessages] = useState<ClubMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [invite, setInvite] = useState('');
+  const [notice, setNotice] = useState('');
   const listRef = useRef<FlatList<ClubMessage>>(null);
+
+  async function sendInvite() {
+    const username = invite.trim();
+    if (!username) return;
+    try {
+      await post(`/clubs/${club.id}/invites`, { username });
+      setNotice('Invite sent!');
+      setInvite('');
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Could not invite');
+    }
+  }
+
+  function confirmKick(m: { id: string; displayName: string }) {
+    Alert.alert('Remove member?', `Kick ${m.displayName} from the club.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Kick',
+        style: 'destructive',
+        onPress: async () => {
+          await del(`/clubs/${club.id}/members/${m.id}`);
+          onChanged();
+        },
+      },
+    ]);
+  }
+
+  function confirmTransfer(m: { id: string; displayName: string }) {
+    Alert.alert('Make owner?', `Hand ownership to ${m.displayName}. You become a member.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Make owner',
+        onPress: async () => {
+          await post(`/clubs/${club.id}/transfer`, { userId: m.id });
+          onChanged();
+        },
+      },
+    ]);
+  }
 
   const loadMessages = useCallback(async () => {
     try {
@@ -472,23 +515,53 @@ function MyClub({ club, onChanged }: { club: ClubDetail; onChanged: () => void }
         </View>
       </Card>
 
+      {isOwner && (
+        <Card style={{ marginTop: space(3) }}>
+          <SectionHeading>Invite a runner</SectionHeading>
+          <View style={{ flexDirection: 'row', gap: space(2) }}>
+            <Input
+              style={{ flex: 1 }}
+              placeholder="Username"
+              autoCapitalize="none"
+              value={invite}
+              onChangeText={(t) => {
+                setInvite(t);
+                setNotice('');
+              }}
+              onSubmitEditing={sendInvite}
+            />
+            <Btn label="Invite" size="sm" disabled={!invite.trim()} onPress={sendInvite} />
+          </View>
+          {notice ? <Text style={s.notice}>{notice}</Text> : null}
+        </Card>
+      )}
+
       <View style={{ marginTop: space(6) }}>
         <SectionHeading>Members</SectionHeading>
         <View style={{ gap: space(2.5) }}>
-          {club.members.map((m) => (
-            <Card key={m.id} style={s.row}>
-              <Avatar user={m} size={34} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.bold}>
-                  {m.displayName}
-                  {m.role === 'owner' ? '  👑' : ''}
-                </Text>
-              </View>
-              <Text style={s.timestamp}>
-                Lv {m.level} · {m.cellsOwned} 🚩
-              </Text>
-            </Card>
-          ))}
+          {club.members.map((m) => {
+            const canModerate = isOwner && m.id !== user?.id;
+            return (
+              <Card key={m.id} style={s.row}>
+                <Avatar user={m} size={34} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.bold}>
+                    {m.displayName}
+                    {m.role === 'owner' ? '  👑' : ''}
+                  </Text>
+                  <Text style={s.timestamp}>
+                    Lv {m.level} · {m.cellsOwned} 🚩
+                  </Text>
+                </View>
+                {canModerate && (
+                  <View style={{ flexDirection: 'row', gap: space(1.5) }}>
+                    <Btn label="👑" size="sm" variant="ghost" onPress={() => confirmTransfer(m)} />
+                    <Btn label="Kick" size="sm" variant="dangerSoft" onPress={() => confirmKick(m)} />
+                  </View>
+                )}
+              </Card>
+            );
+          })}
         </View>
       </View>
     </ScrollView>
@@ -497,6 +570,7 @@ function MyClub({ club, onChanged }: { club: ClubDetail; onChanged: () => void }
 
 function BrowseClubs({ onJoined }: { onJoined: () => void }) {
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
+  const [invites, setInvites] = useState<ClubInvite[]>([]);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
@@ -505,7 +579,12 @@ function BrowseClubs({ onJoined }: { onJoined: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      setClubs(await get<ClubSummary[]>('/clubs'));
+      const [c, inv] = await Promise.all([
+        get<ClubSummary[]>('/clubs'),
+        get<ClubInvite[]>('/clubs/invites'),
+      ]);
+      setClubs(c);
+      setInvites(inv);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load clubs');
     }
@@ -516,6 +595,15 @@ function BrowseClubs({ onJoined }: { onJoined: () => void }) {
       load();
     }, [load]),
   );
+
+  async function respondInvite(id: string, action: 'accept' | 'decline') {
+    try {
+      await post(`/clubs/invites/${id}/${action}`);
+      onJoined();
+    } catch (err) {
+      Alert.alert('Failed', err instanceof Error ? err.message : 'Network error');
+    }
+  }
 
   async function create() {
     setBusy(true);
@@ -541,6 +629,32 @@ function BrowseClubs({ onJoined }: { onJoined: () => void }) {
 
   return (
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      {invites.length > 0 && (
+        <View style={{ marginBottom: space(5) }}>
+          <SectionHeading>Invites</SectionHeading>
+          <View style={{ gap: space(2.5) }}>
+            {invites.map((inv) => (
+              <Card key={inv.id} style={[s.row, s.highlight]}>
+                <View style={[s.clubBadge, { backgroundColor: inv.club.color, width: 40, height: 40 }]}>
+                  <Text style={[s.clubTag, { fontSize: 11 }]}>{inv.club.tag}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.bold}>{inv.club.name}</Text>
+                  <Text style={s.timestamp}>Invited by {inv.inviter.displayName}</Text>
+                </View>
+                <Btn label="Accept" size="sm" onPress={() => respondInvite(inv.id, 'accept')} />
+                <Btn
+                  label="Decline"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => respondInvite(inv.id, 'decline')}
+                />
+              </Card>
+            ))}
+          </View>
+        </View>
+      )}
+
       {creating ? (
         <Card style={{ gap: space(2.5) }}>
           <Text style={s.bold}>Create a club</Text>
