@@ -3,10 +3,12 @@
 > Evidence-based codebase review. Every finding cites the file(s) it was verified in.
 > Generated against commit `32ae0bf` (branch `main`).
 >
-> ## ⚠️ Status update — roadmap items 1–4 have since been completed
+> ## ⚠️ Status update — the entire prioritized roadmap is complete
 >
-> This report describes the codebase **as of `32ae0bf`**. The following have been
-> fixed since; the findings below are retained as the historical record.
+> This report describes the codebase **as of `32ae0bf`**. Everything below is
+> retained as the historical record; the current status is summarised here.
+>
+> ### Roadmap (all 7 items addressed)
 >
 > | Roadmap item | Status | Commit |
 > |---|---|---|
@@ -14,15 +16,35 @@
 > | 2. Pause-clock and backdated-streak bugs (Bugs #1, #2) | ✅ Done | `08608d5` |
 > | 3. Weekly challenge lifecycle | ✅ Done | `600dbd3` |
 > | 4. Profile editing UI + `pino-http` wiring | ✅ Done | `5687af1` |
-> | Tech debt: PostGIS swapped for plain Postgres; week helper extracted to shared | ✅ Done | `cfc951c` |
+> | Tech debt: PostGIS → plain Postgres; week helper extracted to shared | ✅ Done | `cfc951c` |
 > | 4.5 Mobile feature parity + mobile in CI | ✅ Done | `d9fb077` |
 > | 5. Web test coverage (Vitest + RTL) | ✅ Done | `cace6af` |
-> | 6. Deployment (API Dockerfile, prod-safe seed, compose profile, docs) | ✅ Done | this commit |
+> | 6. Deployment (API Dockerfile, prod-safe seed, compose profile, docs) | ✅ Done | `0979d83` |
+> | 7a. Coin shop (XP Boost, Streak Freeze) | ✅ Done | `298e886` |
+> | 7b. Club invites + owner moderation | ✅ Done | `1d59aab` |
 >
-> **Still open (breadth, roadmap item 7):** push notifications, background mobile
-> tracking, offline maps, GPX import, coin shop, club invites/moderation, and
-> app-store release. The core product is now feature-complete on both clients,
-> tested (99 tests), and container-deployable.
+> **Test count: 55 → 115** (30 shared + 65 API + 20 web), plus a mobile CI job
+> (typecheck, expo-doctor, dual-platform bundle).
+>
+> ### Still open
+>
+> **Not started (net-new features, none blocking):**
+> push notifications · background GPS tracking · offline maps · geofence ·
+> saved/reusable routes · GPX import · club events / scheduled battles ·
+> social sharing & privacy settings · analytics · crash reporting · app-store release.
+> *(Push and background tracking need a custom Expo dev-client, not Expo Go.)*
+>
+> **Known-but-unfixed minor items** (from the findings below):
+> - Risk #4 — tokens still in `localStorage`; **mitigated** (logout revocation,
+>   15-min access token, helmet CSP) but not eliminated. Inherent SPA tradeoff.
+> - Risk #7 — `territoryInBBox` still validates only north/west; masked by the
+>   route's zod schema.
+> - `captureCells` cartesian over-fetch; `detectPersonalBests` O(n) per run.
+> - `GET /challenges/:id/leaderboard` still called by no client.
+> - Time logic remains UTC-only (streaks, weekly windows).
+> - Mobile has no unit tests (CI covers typecheck + bundle only).
+> - Global `users.role` (site admin) still unenforced — club-level roles
+>   (owner/member) *are* enforced via `requireOwner` since `1d59aab`.
 >
 > **Note on scope:** the backlog's 405 task names are placeholders (e.g. "Login Task 1"),
 > so "intended architecture" is inferred from the epic/feature names plus the agreed build
