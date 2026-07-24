@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { UserPublic } from '@runturf/shared';
+
+/**
+ * Read once per render rather than subscribing: these animations are one-shot
+ * reveals, so reacting to a mid-animation preference change buys nothing.
+ */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+}
 
 /** Colored initial avatar, consistent everywhere a user appears. */
 export function Avatar({
@@ -88,10 +96,22 @@ export function ProgressRing({
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, progress));
-  const [drawn, setDrawn] = useState(0);
+  // Start at the true value when motion is reduced, so the arc is never
+  // animated in for users who asked us not to.
+  const [drawn, setDrawn] = useState(() => (prefersReducedMotion() ? clamped : 0));
   useEffect(() => {
+    if (prefersReducedMotion()) {
+      setDrawn(clamped);
+      return;
+    }
     const id = requestAnimationFrame(() => setDrawn(clamped));
-    return () => cancelAnimationFrame(id);
+    // rAF is suspended in background tabs and throttled webviews. Without this
+    // the ring would stay stuck at 0 — an empty ring reads as "no progress".
+    const safety = window.setTimeout(() => setDrawn(clamped), 250);
+    return () => {
+      cancelAnimationFrame(id);
+      clearTimeout(safety);
+    };
   }, [clamped]);
 
   return (
@@ -123,19 +143,33 @@ export function ProgressRing({
 
 /** Number that counts up to its target — for reward moments only. */
 export function CountUp({ to, duration = 800, prefix = '' }: { to: number; duration?: number; prefix?: string }) {
-  const [value, setValue] = useState(0);
-  const start = useRef<number | null>(null);
+  // The target is the correct reading; the count-up is decoration on top of it.
+  // Anything that stops the animation must leave the true number on screen.
+  const [value, setValue] = useState(() => (prefersReducedMotion() ? to : 0));
   useEffect(() => {
+    if (prefersReducedMotion()) {
+      setValue(to);
+      return;
+    }
     let raf = 0;
+    // Local, not a ref: a ref persists across re-runs, so a changed `to` would
+    // measure elapsed time from the *first* animation and snap instantly.
+    let start: number | null = null;
     const tick = (t: number) => {
-      start.current ??= t;
-      const p = Math.min(1, (t - start.current) / duration);
+      start ??= t;
+      const p = Math.min(1, (t - start) / duration);
       const eased = 1 - Math.pow(1 - p, 3);
       setValue(Math.round(to * eased));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // If rAF never runs (background tab, throttled webview, headless browser),
+    // the number would be stranded at 0 — showing "+0 XP" for a 209 XP run.
+    const safety = window.setTimeout(() => setValue(to), duration + 300);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(safety);
+    };
   }, [to, duration]);
   return (
     <span>

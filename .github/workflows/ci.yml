@@ -53,6 +53,9 @@ jobs:
       - run: npm install
       - run: npx tsc --noEmit
       - run: npx expo-doctor
+      # Screen-level tests: bundling proves the app compiles, but only these
+      # actually run the screens (effects, presses, the GPX picker chain).
+      - run: npm test
       # Bundling is the real regression guard: it exercises the whole module
       # graph, including the shared package resolved via metro.config.js.
       - run: npx expo export --platform android --platform ios
