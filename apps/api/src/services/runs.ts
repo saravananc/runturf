@@ -1,13 +1,14 @@
 import {
+  parseGpx,
   pathDistanceM,
   type RunPointInput,
   type RunReport,
   type RunSummary,
 } from '@runturf/shared';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { runs } from '../db/schema.js';
-import { badRequest, notFound } from '../errors.js';
+import { badRequest, conflict, notFound } from '../errors.js';
 import { applyRunRewards } from './gamification.js';
 import { getUserStats } from './stats.js';
 import { captureCells } from './territory.js';
@@ -101,6 +102,30 @@ export async function submitRun(
     personalBests,
     perksApplied: rewards.perksApplied,
   };
+}
+
+/**
+ * Imports a GPX file as a run. Reuses the normal submit pipeline so territory
+ * capture, XP, achievements and challenge progress all apply identically.
+ */
+export async function importGpxRun(userId: string, gpx: string): Promise<RunReport> {
+  let points: RunPointInput[];
+  try {
+    points = parseGpx(gpx);
+  } catch (err) {
+    // Parser errors are user-facing ("no timestamps", "not a GPX file"…).
+    throw badRequest(err instanceof Error ? err.message : 'Could not read that GPX file');
+  }
+
+  const startedAt = new Date(points[0].t);
+  // Guard against importing the same file twice, which would double-count
+  // territory and XP.
+  const duplicate = await db.query.runs.findFirst({
+    where: and(eq(runs.userId, userId), eq(runs.startedAt, startedAt)),
+  });
+  if (duplicate) throw conflict('That run has already been imported');
+
+  return submitRun(userId, { startedAt: startedAt.toISOString(), points });
 }
 
 async function detectPersonalBests(

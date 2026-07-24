@@ -1,9 +1,12 @@
-import type { RunSummary, UserStats } from '@runturf/shared';
+import type { RunReport, RunSummary, UserStats } from '@runturf/shared';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { del, get } from '../api';
-import { Card, Empty, ErrorNote, Label, Loading, ScreenTitle, StatTile } from '../components/ui';
+import { del, get, post } from '../api';
+import { RunReportModal } from '../components/RunReportModal';
+import { Btn, Card, Empty, ErrorNote, Label, Loading, ScreenTitle, StatTile } from '../components/ui';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../format';
 import { colors, font, space, type } from '../theme';
 
@@ -12,6 +15,8 @@ export function HistoryScreen() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [imported, setImported] = useState<RunReport | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -32,6 +37,28 @@ export function HistoryScreen() {
       load();
     }, [load]),
   );
+
+  async function importGpx() {
+    setImporting(true);
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        // GPX has no universal MIME type across platforms, so accept broadly
+        // and let the server reject anything that is not a GPX track.
+        type: ['application/gpx+xml', 'application/xml', 'text/xml', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+
+      const gpx = await FileSystem.readAsStringAsync(picked.assets[0].uri);
+      const report = await post<RunReport>('/runs/import', { gpx });
+      setImported(report);
+      await load();
+    } catch (err) {
+      Alert.alert('Import failed', err instanceof Error ? err.message : 'Could not read that file');
+    } finally {
+      setImporting(false);
+    }
+  }
 
   function confirmDelete(run: RunSummary) {
     Alert.alert('Delete run?', `${formatDistance(run.distanceM)} on ${formatDate(run.startedAt)}`, [
@@ -54,7 +81,8 @@ export function HistoryScreen() {
   if (!runs && !error) return <Loading />;
 
   return (
-    <FlatList
+    <>
+      <FlatList
       style={s.flex}
       contentContainerStyle={s.content}
       data={runs ?? []}
@@ -72,7 +100,16 @@ export function HistoryScreen() {
       }
       ListHeaderComponent={
         <View>
-          <ScreenTitle title="History" />
+          <View style={s.headerRow}>
+            <ScreenTitle title="History" />
+            <Btn
+              label={importing ? 'Importing…' : '↥ Import GPX'}
+              size="sm"
+              variant="ghost"
+              disabled={importing}
+              onPress={importGpx}
+            />
+          </View>
           {error ? <ErrorNote message={error} /> : null}
           {stats && (
             <View style={s.tiles}>
@@ -106,14 +143,19 @@ export function HistoryScreen() {
           </View>
         </Card>
       )}
-      ItemSeparatorComponent={() => <View style={{ height: space(2.5) }} />}
-    />
+        ItemSeparatorComponent={() => <View style={{ height: space(2.5) }} />}
+      />
+      {/* An imported run earns rewards like any other, so show the same report. */}
+      {imported && <RunReportModal report={imported} onClose={() => setImported(null)} />}
+    </>
   );
 }
+
 
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.base },
   content: { padding: space(4), paddingBottom: space(10) },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   tiles: { flexDirection: 'row', gap: space(2.5), marginBottom: space(4) },
   run: { padding: space(4) },
   runTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { h, idParam, parseBody, requireAuth } from '../middleware.js';
-import { deleteRun, getRun, listRuns, submitRun } from '../services/runs.js';
+import { deleteRun, getRun, importGpxRun, listRuns, submitRun } from '../services/runs.js';
 
 const RunSubmit = z.object({
   startedAt: z.string(),
@@ -26,6 +26,15 @@ runsRouter.post(
   '/',
   h(async (req, res) => {
     res.status(201).json(await submitRun(req.userId, parseBody(RunSubmit, req.body)));
+  }),
+);
+
+// Fixed path — must precede the `/:id` param route.
+runsRouter.post(
+  '/import',
+  h(async (req, res) => {
+    const { gpx } = parseBody(z.object({ gpx: z.string().min(1).max(10_000_000) }), req.body);
+    res.status(201).json(await importGpxRun(req.userId, gpx));
   }),
 );
 

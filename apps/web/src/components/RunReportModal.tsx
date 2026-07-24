@@ -5,8 +5,10 @@ import { CountUp, ProgressRing } from './ui';
 
 export function RunReportModal({ report, onClose }: { report: RunReport; onClose: () => void }) {
   const { run, stats } = report;
+  // fixed, not absolute: this modal opens from both Record and History, so it
+  // must overlay the viewport rather than a positioned ancestor.
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-base/80 p-4 backdrop-blur-sm">
       <div className="card-raised anim-pop max-h-full w-full max-w-sm overflow-y-auto p-6">
         <p className="t-label text-center">Run complete</p>
 

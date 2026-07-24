@@ -1,9 +1,17 @@
-import type { RunSummary, UserStats } from '@runturf/shared';
+import type { RunReport, RunSummary, UserStats } from '@runturf/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { del, get } from '../api/client';
-import { FlagIcon, HistoryIcon, MapIcon, RouteIcon, SwordsIcon } from '../components/icons';
+import { useRef, useState } from 'react';
+import { del, get, post } from '../api/client';
+import {
+  DownloadIcon,
+  FlagIcon,
+  HistoryIcon,
+  MapIcon,
+  RouteIcon,
+  SwordsIcon,
+} from '../components/icons';
 import { RunDetailModal } from '../components/RunDetailModal';
+import { RunReportModal } from '../components/RunReportModal';
 import { EmptyState, StatTile } from '../components/ui';
 import { WeeklyChart } from '../components/WeeklyChart';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
@@ -16,6 +24,10 @@ export function HistoryPage() {
     queryFn: () => get<UserStats>('/users/me/stats'),
   });
   const [openRun, setOpenRun] = useState<string | null>(null);
+  const [imported, setImported] = useState<RunReport | null>(null);
+  const [importError, setImportError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function onDelete(id: string) {
     await del(`/runs/${id}`);
@@ -23,11 +35,53 @@ export function HistoryPage() {
     qc.invalidateQueries({ queryKey: ['stats'] });
   }
 
+  async function onImportFile(file: File) {
+    setImporting(true);
+    setImportError('');
+    try {
+      const report = await post<RunReport>('/runs/import', { gpx: await file.text() });
+      setImported(report);
+      qc.invalidateQueries({ queryKey: ['runs'] });
+      qc.invalidateQueries({ queryKey: ['stats'] });
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Could not import that file');
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = ''; // allow re-picking the same file
+    }
+  }
+
   const s = stats.data;
 
   return (
     <div className="mx-auto h-full w-full max-w-lg overflow-y-auto p-4 pb-8">
-      <h1 className="t-title text-ink">History</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="t-title text-ink">History</h1>
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          className="btn btn-ghost px-3.5 py-2 text-[13px] text-skyx"
+        >
+          <DownloadIcon size={16} className="rotate-180" />
+          {importing ? 'Importing…' : 'Import GPX'}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".gpx,application/gpx+xml,application/xml,text/xml"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onImportFile(file);
+          }}
+        />
+      </div>
+
+      {importError && (
+        <p role="alert" className="anim-rise mt-2 text-[13px] font-medium text-ember">
+          {importError}
+        </p>
+      )}
 
       {s && (
         <div className="mt-4 grid grid-cols-3 gap-2.5">
@@ -104,6 +158,9 @@ export function HistoryPage() {
       {openRun && (
         <RunDetailModal runId={openRun} onClose={() => setOpenRun(null)} onDelete={onDelete} />
       )}
+
+      {/* An imported run earns rewards like any other, so show the same report. */}
+      {imported && <RunReportModal report={imported} onClose={() => setImported(null)} />}
     </div>
   );
 }
