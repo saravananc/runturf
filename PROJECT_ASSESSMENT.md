@@ -26,10 +26,11 @@
 > | 9. Minor cleanups (bbox validation, capture over-fetch, PB query, dead endpoint) | ✅ Done | `33388a6` |
 > | 10. rAF-independent animated values + mobile screen tests | ✅ Done | `e9e4527` |
 > | 11. Mobile screen tests for the remaining seven screens | ✅ Done | `06e86a1` |
+> | 12. Mobile API-client tests (session, refresh rotation, revocation) | ✅ Done | `467e39b` |
 >
-> **Test count: 55 → 189** (39 shared + 73 API + 26 web + 51 mobile), plus a
+> **Test count: 55 → 213** (39 shared + 73 API + 26 web + 75 mobile), plus a
 > mobile CI job (typecheck, expo-doctor, jest, dual-platform bundle).
-> All 9 mobile screens now have runtime coverage.
+> All 9 mobile screens and the API client now have runtime coverage.
 >
 > ### Still open
 >
@@ -43,9 +44,9 @@
 > - Risk #4 — tokens still in `localStorage`; **mitigated** (logout revocation,
 >   15-min access token, helmet CSP) but not eliminated. Inherent SPA tradeoff.
 > - Time logic remains UTC-only (streaks, weekly windows).
-> - Mobile `api.ts` (session persistence, refresh rotation) has no direct test;
->   the screens mock it. Native modules are mocked, so no device/emulator run in
->   CI — real GPS, the document picker UI and map rendering stay unexercised.
+> - Native modules are mocked, so there is no device/emulator run in CI — real
+>   GPS, the document-picker UI and map rendering stay unexercised. Closing that
+>   needs an EAS Build plus Detox or Maestro.
 > - Global `users.role` (site admin) still unenforced — club-level roles
 >   (owner/member) *are* enforced via `requireOwner` since `1d59aab`.
 >
