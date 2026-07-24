@@ -40,6 +40,7 @@ export function LoginScreen() {
         <View style={{ height: space(6) }} />
 
         <Input
+          testID="login-username"
           placeholder="Username"
           autoCapitalize="none"
           autoCorrect={false}
@@ -48,6 +49,7 @@ export function LoginScreen() {
           returnKeyType="next"
         />
         <Input
+          testID="login-password"
           placeholder="Password"
           secureTextEntry
           value={password}
@@ -57,6 +59,7 @@ export function LoginScreen() {
         />
         {error ? <ErrorNote message={error} /> : null}
         <Btn
+          testID="login-submit"
           label={busy ? 'One sec…' : mode === 'login' ? 'Sign in' : 'Create account'}
           disabled={busy || !username.trim() || !password}
           onPress={submit}

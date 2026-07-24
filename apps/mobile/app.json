@@ -30,7 +30,8 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "@config-plugins/detox"
     ]
   }
 }

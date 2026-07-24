@@ -1,0 +1,8 @@
+# Native projects are generated on demand by `expo prebuild` (CNG), so they are
+# rebuilt from app.json rather than committed. Detox regenerates them before a
+# device run; see the e2e:prebuild script.
+/android
+/ios
+
+# Detox run output (logs, screenshots, device artifacts)
+/artifacts

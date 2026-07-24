@@ -59,3 +59,85 @@ jobs:
       # Bundling is the real regression guard: it exercises the whole module
       # graph, including the shared package resolved via metro.config.js.
       - run: npx expo export --platform android --platform ios
+
+  # Detox drives the real app on an emulator, so it needs a native build, KVM
+  # and a booted AVD — far slower than the jest suite. Kept separate so a normal
+  # push still gets fast feedback from the `mobile` job above.
+  #
+  # Android only: the iOS half needs a macOS runner with Xcode.
+  mobile-e2e:
+    runs-on: ubuntu-latest
+    # ~20 min of emulator time per run; skip it on draft PRs.
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    services:
+      db:
+        image: postgres:16-bullseye
+        env:
+          POSTGRES_USER: runturf
+          POSTGRES_PASSWORD: runturf
+          POSTGRES_DB: runturf
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # The device talks to a real API, so bring the stack up first.
+      - run: npm ci
+      - run: npm run db:push
+        env:
+          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
+      - run: npm run db:seed
+        env:
+          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
+          SEED_DEMO: 'true' # e2e signs in as the demo account
+      - name: Start API
+        run: npm run dev --workspace apps/api &
+        env:
+          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
+      - name: Wait for API
+        run: npx wait-on http://localhost:4000/health --timeout 60000
+
+      - name: Install mobile deps
+        working-directory: apps/mobile
+        run: npm install
+      - name: Generate native project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --clean
+
+      # KVM is required for a hardware-accelerated emulator.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Run Detox on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          avd-name: Medium_Phone # must match .detoxrc.js
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          working-directory: apps/mobile
+          script: |
+            npm run e2e:build
+            npm run e2e -- --headless --record-logs failing
+
+      - name: Upload Detox artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-artifacts
+          path: apps/mobile/artifacts
+          retention-days: 7

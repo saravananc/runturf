@@ -61,6 +61,9 @@ function Tabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
+        // Stable handle for device tests. Matching tabs by label is ambiguous:
+        // "History" is both a tab label and that screen's title.
+        tabBarButtonTestID: `tab-${route.name}`,
         tabBarActiveTintColor: colors.volt,
         tabBarInactiveTintColor: colors.ink3,
         tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11 },

@@ -59,14 +59,45 @@ editing, challenges, and social (feed / friends / clubs) — all hitting the sam
 ## Tests & checks
 
 ```bash
-npm test          # 96 tests: shared unit + API integration + web (needs the DB up)
+npm test          # shared unit + API integration + web (needs the DB up)
 npm run typecheck # all workspaces
 npm run lint      # eslint
 ```
 
+Mobile has its own runner (it is not a workspace):
+
+```bash
+cd apps/mobile
+npm test          # jest-expo + React Native Testing Library
+```
+
+### Device tests (Detox, Android)
+
+The jest suite mocks the native layer, so it cannot prove the app boots on a
+device, that AsyncStorage really persists across a restart, or that
+`react-native-maps` / `expo-location` load at all. Detox covers that by driving
+a real build on an emulator.
+
+Needs the JDK, the Android SDK, and an AVD. Point `DETOX_AVD_NAME` at your own
+AVD if it is not called `Medium_Phone`. **The API must be running** — the app
+reaches the host at `10.0.2.2:4000` from the emulator — and the demo account
+must be seeded.
+
+```bash
+cd apps/mobile
+npm run e2e:prebuild   # generate ./android from app.json (not committed)
+npm run e2e:build      # assemble the debug + androidTest APKs
+npm run e2e            # run the specs on the emulator
+```
+
+iOS configurations are deliberately absent: building them needs Xcode, so they
+cannot run on Windows or on a Linux CI runner. Add them alongside the Android
+ones when a macOS runner is available.
+
 CI (`.github/workflows/ci.yml`) runs lint, typecheck, migrate, seed, and tests
-against a Postgres service, plus a separate job that typechecks and bundles the
-mobile app for Android and iOS.
+against a Postgres service; a `mobile` job typechecks, unit-tests and bundles
+for Android and iOS; and a separate `mobile-e2e` job runs Detox on an emulator
+against a live API.
 
 ## Deployment
 

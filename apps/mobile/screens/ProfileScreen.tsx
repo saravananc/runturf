@@ -88,8 +88,15 @@ export function ProfileScreen({ navigation }: { navigation: NavigationProp<never
           <Text style={s.handle}>@{user.username}</Text>
         </View>
         <View style={{ gap: space(1.5) }}>
-          <Btn label="Edit" variant="ghost" size="sm" onPress={() => setEditing(true)} />
           <Btn
+            testID="profile-edit"
+            label="Edit"
+            variant="ghost"
+            size="sm"
+            onPress={() => setEditing(true)}
+          />
+          <Btn
+            testID="profile-signout"
             label="Sign out"
             variant="ghost"
             size="sm"

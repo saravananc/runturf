@@ -22,6 +22,7 @@ export function Btn({
   disabled,
   size = 'md',
   style,
+  testID,
 }: {
   label: string;
   onPress: () => void;
@@ -29,6 +30,8 @@ export function Btn({
   disabled?: boolean;
   size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
+  /** Stable handle for device tests; labels carry emoji and change with copy. */
+  testID?: string;
 }) {
   const bg = {
     primary: s.btnPrimary,
@@ -46,6 +49,7 @@ export function Btn({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
       accessibilityRole="button"
       style={({ pressed }) => [
         s.btn,
