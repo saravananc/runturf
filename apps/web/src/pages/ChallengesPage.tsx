@@ -124,7 +124,7 @@ export function ChallengesPage() {
               <button
                 onClick={() => setOpenStandings(openStandings === c.id ? null : c.id)}
                 aria-expanded={openStandings === c.id}
-                className="mt-3 text-[12px] font-semibold text-ink-3 transition-colors hover:text-ink-2"
+                className="mt-3 block text-[12px] font-semibold text-ink-3 transition-colors hover:text-ink-2"
               >
                 {openStandings === c.id ? '▾ Hide standings' : '▸ Standings'}
               </button>
