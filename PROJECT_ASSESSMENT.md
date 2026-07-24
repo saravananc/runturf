@@ -22,25 +22,23 @@
 > | 6. Deployment (API Dockerfile, prod-safe seed, compose profile, docs) | ✅ Done | `0979d83` |
 > | 7a. Coin shop (XP Boost, Streak Freeze) | ✅ Done | `298e886` |
 > | 7b. Club invites + owner moderation | ✅ Done | `1d59aab` |
+> | 8. GPX import (parser, API, web + mobile UI) | ✅ Done | `121f903` |
+> | 9. Minor cleanups (bbox validation, capture over-fetch, PB query, dead endpoint) | ✅ Done | `33388a6` |
 >
-> **Test count: 55 → 115** (30 shared + 65 API + 20 web), plus a mobile CI job
+> **Test count: 55 → 132** (39 shared + 73 API + 20 web), plus a mobile CI job
 > (typecheck, expo-doctor, dual-platform bundle).
 >
 > ### Still open
 >
 > **Not started (net-new features, none blocking):**
 > push notifications · background GPS tracking · offline maps · geofence ·
-> saved/reusable routes · GPX import · club events / scheduled battles ·
+> saved/reusable routes · club events / scheduled battles ·
 > social sharing & privacy settings · analytics · crash reporting · app-store release.
 > *(Push and background tracking need a custom Expo dev-client, not Expo Go.)*
 >
 > **Known-but-unfixed minor items** (from the findings below):
 > - Risk #4 — tokens still in `localStorage`; **mitigated** (logout revocation,
 >   15-min access token, helmet CSP) but not eliminated. Inherent SPA tradeoff.
-> - Risk #7 — `territoryInBBox` still validates only north/west; masked by the
->   route's zod schema.
-> - `captureCells` cartesian over-fetch; `detectPersonalBests` O(n) per run.
-> - `GET /challenges/:id/leaderboard` still called by no client.
 > - Time logic remains UTC-only (streaks, weekly windows).
 > - Mobile has no unit tests (CI covers typecheck + bundle only).
 > - Global `users.role` (site admin) still unenforced — club-level roles
