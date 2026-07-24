@@ -1,17 +1,64 @@
-import type { Challenge } from '@runturf/shared';
+import type { Challenge, ChallengeStanding } from '@runturf/shared';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { get, post } from '../api';
-import { Btn, Card, Empty, ErrorNote, Loading, ProgressBar, ScreenTitle } from '../components/ui';
+import {
+  Avatar,
+  Btn,
+  Card,
+  Empty,
+  ErrorNote,
+  Loading,
+  ProgressBar,
+  ScreenTitle,
+} from '../components/ui';
 import { formatDistance } from '../format';
 import { colors, font, space, type } from '../theme';
+
+/** Standings for one challenge, loaded on demand when expanded. */
+function Standings({ challenge }: { challenge: Challenge }) {
+  const [rows, setRows] = useState<ChallengeStanding[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    get<ChallengeStanding[]>(`/challenges/${challenge.id}/leaderboard`)
+      .then((r) => !cancelled && setRows(r))
+      .catch(() => !cancelled && setRows([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [challenge.id]);
+
+  const fmt = (n: number) =>
+    challenge.metric === 'distance_m' ? formatDistance(n) : `${Math.round(n)} cells`;
+
+  if (!rows) return <Text style={s.standingsNote}>Loading…</Text>;
+  if (rows.length === 0) return <Text style={s.standingsNote}>Nobody has joined yet.</Text>;
+
+  return (
+    <View style={s.standings}>
+      {rows.map((row, i) => (
+        <View key={row.user.id} style={s.standingRow}>
+          <Text style={s.standingRank}>{i + 1}</Text>
+          <Avatar user={row.user} size={24} />
+          <Text style={s.standingName} numberOfLines={1}>
+            {row.user.displayName}
+          </Text>
+          {row.completed && <Text style={s.standingDone}>DONE</Text>}
+          <Text style={s.standingValue}>{fmt(row.progress)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export function ChallengesScreen() {
   const [items, setItems] = useState<Challenge[] | null>(null);
   const [error, setError] = useState('');
   const [joining, setJoining] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [openStandings, setOpenStandings] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -110,6 +157,16 @@ export function ChallengesScreen() {
                 style={{ marginTop: space(3.5), alignSelf: 'flex-start' }}
               />
             )}
+
+            <Pressable
+              onPress={() => setOpenStandings(openStandings === item.id ? null : item.id)}
+              style={{ marginTop: space(3) }}
+            >
+              <Text style={s.standingsToggle}>
+                {openStandings === item.id ? '▾ Hide standings' : '▸ Standings'}
+              </Text>
+            </Pressable>
+            {openStandings === item.id && <Standings challenge={item} />}
           </Card>
         );
       }}
@@ -128,6 +185,37 @@ const s = StyleSheet.create({
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space(1.5) },
   progressText: { fontFamily: font.semibold, fontSize: type.caption, color: colors.ink2 },
   progressPct: {
+    fontFamily: font.bold,
+    fontSize: type.caption,
+    color: colors.ink2,
+    fontVariant: ['tabular-nums'],
+  },
+  standingsToggle: { fontFamily: font.semibold, fontSize: type.caption, color: colors.ink3 },
+  standingsNote: {
+    fontFamily: font.regular,
+    fontSize: type.caption,
+    color: colors.ink3,
+    textAlign: 'center',
+    paddingVertical: space(3),
+  },
+  standings: {
+    marginTop: space(3),
+    paddingTop: space(3),
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: space(1.5),
+  },
+  standingRow: { flexDirection: 'row', alignItems: 'center', gap: space(2.5) },
+  standingRank: {
+    width: 16,
+    textAlign: 'center',
+    fontFamily: font.bold,
+    fontSize: type.label,
+    color: colors.ink3,
+  },
+  standingName: { flex: 1, fontFamily: font.semibold, fontSize: type.caption, color: colors.ink },
+  standingDone: { fontFamily: font.extrabold, fontSize: type.label, color: colors.volt },
+  standingValue: {
     fontFamily: font.bold,
     fontSize: type.caption,
     color: colors.ink2,

@@ -8,7 +8,7 @@ import {
   type LatLng,
   type LeaderboardEntry,
 } from '@runturf/shared';
-import { and, count, desc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
 import { db, type Db } from '../db/client.js';
 import { cellCaptures, runs, territoryCells, users, userStats } from '../db/schema.js';
 import { badRequest } from '../errors.js';
@@ -36,18 +36,21 @@ export async function captureCells(
   const cells = cellsOnPath(path, TERRITORY_ZOOM);
   if (cells.length === 0) return { newCells: 0, stolenCells: 0, retainedCells: 0 };
 
-  // Fetch current owners of the touched cells. Cell count is bounded by run
-  // length (a marathon at zoom 18 touches only a few hundred cells).
-  const xs = cells.map((c) => c.x);
-  const ys = cells.map((c) => c.y);
+  // Fetch current owners of exactly the touched cells. Matching the (x, y)
+  // pairs as a tuple avoids the cartesian product that `x IN (…) AND y IN (…)`
+  // would read (every crossing of the route's columns and rows). Cell count is
+  // bounded by run length — a marathon at zoom 18 touches a few hundred cells.
+  const pairs = sql.join(
+    cells.map((c) => sql`(${c.x}, ${c.y})`),
+    sql`, `,
+  );
   const existing = await tx
     .select({ x: territoryCells.x, y: territoryCells.y, ownerId: territoryCells.ownerId })
     .from(territoryCells)
     .where(
       and(
         eq(territoryCells.zoom, TERRITORY_ZOOM),
-        inArray(territoryCells.x, xs),
-        inArray(territoryCells.y, ys),
+        sql`(${territoryCells.x}, ${territoryCells.y}) IN (${pairs})`,
       ),
     );
   const ownerByKey = new Map(existing.map((c) => [`${c.x}:${c.y}`, c.ownerId]));
@@ -99,10 +102,18 @@ const MAX_VIEWPORT_CELLS = 15_000;
 
 /** Territory cells in a viewport as a GeoJSON FeatureCollection. */
 export async function territoryInBBox(bbox: BBox): Promise<GeoJSONFC> {
+  // Validate every edge, not just north/west: the route's zod schema also
+  // checks these, but this service must be safe when called directly.
   if (
     !(bbox.west < bbox.east) ||
     !(bbox.south < bbox.north) ||
+    !Number.isFinite(bbox.north) ||
+    !Number.isFinite(bbox.south) ||
+    !Number.isFinite(bbox.east) ||
+    !Number.isFinite(bbox.west) ||
     Math.abs(bbox.north) > 90 ||
+    Math.abs(bbox.south) > 90 ||
+    Math.abs(bbox.east) > 180 ||
     Math.abs(bbox.west) > 180
   ) {
     throw badRequest('Invalid bbox');

@@ -5,7 +5,7 @@ import {
   type RunReport,
   type RunSummary,
 } from '@runturf/shared';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, max, sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { runs } from '../db/schema.js';
 import { badRequest, conflict, notFound } from '../errors.js';
@@ -128,27 +128,38 @@ export async function importGpxRun(userId: string, gpx: string): Promise<RunRepo
   return submitRun(userId, { startedAt: startedAt.toISOString(), points });
 }
 
+/**
+ * Compares this run against the user's previous bests.
+ * Uses aggregates so the cost is one indexed query regardless of run count
+ * (it previously loaded every prior run into memory on each submission).
+ */
 async function detectPersonalBests(
   userId: string,
   summary: { distanceM: number; durationS: number; avgPaceSPerKm: number | null },
 ): Promise<string[]> {
-  const prev = await db.query.runs.findMany({
-    where: eq(runs.userId, userId),
-    columns: { distanceM: true, durationS: true, avgPaceSPerKm: true },
-  });
-  if (prev.length === 0) return [];
+  const [prev] = await db
+    .select({
+      runCount: count(),
+      longestM: max(runs.distanceM),
+      // Best pace only counts runs long enough for pace to be meaningful.
+      bestPace: sql<number | null>`MIN(${runs.avgPaceSPerKm}) FILTER (
+        WHERE ${runs.avgPaceSPerKm} IS NOT NULL AND ${runs.distanceM} >= 1000
+      )`,
+    })
+    .from(runs)
+    .where(eq(runs.userId, userId));
+
+  if (!prev || prev.runCount === 0) return [];
+
   const bests: string[] = [];
-  if (summary.distanceM > Math.max(...prev.map((r) => r.distanceM))) {
+  if (prev.longestM !== null && summary.distanceM > prev.longestM) {
     bests.push('Longest run');
   }
-  const prevPaces = prev
-    .filter((r) => r.avgPaceSPerKm !== null && r.distanceM >= 1000)
-    .map((r) => r.avgPaceSPerKm!);
   if (
     summary.avgPaceSPerKm !== null &&
     summary.distanceM >= 1000 &&
-    prevPaces.length > 0 &&
-    summary.avgPaceSPerKm < Math.min(...prevPaces)
+    prev.bestPace !== null &&
+    summary.avgPaceSPerKm < Number(prev.bestPace)
   ) {
     bests.push('Best pace');
   }

@@ -186,6 +186,12 @@ export interface ClubMessage {
   createdAt: string;
 }
 
+export interface ChallengeStanding {
+  user: UserPublic;
+  progress: number;
+  completed: boolean;
+}
+
 export interface Challenge {
   id: string;
   code: string;

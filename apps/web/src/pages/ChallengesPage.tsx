@@ -1,12 +1,46 @@
-import type { Challenge } from '@runturf/shared';
+import type { Challenge, ChallengeStanding } from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { get, post } from '../api/client';
 import { CoinIcon, TargetIcon } from '../components/icons';
-import { EmptyState } from '../components/ui';
+import { Avatar, EmptyState } from '../components/ui';
 import { formatDistance } from '../record/recorder';
+
+/** Standings for one challenge, loaded on demand when expanded. */
+function Standings({ challenge }: { challenge: Challenge }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['challengeStandings', challenge.id],
+    queryFn: () => get<ChallengeStanding[]>(`/challenges/${challenge.id}/leaderboard`),
+  });
+
+  const fmt = (n: number) =>
+    challenge.metric === 'distance_m' ? formatDistance(n) : `${Math.round(n)} cells`;
+
+  if (isLoading) return <p className="py-3 text-center text-[12px] text-ink-3">Loading…</p>;
+  if (!data?.length) {
+    return <p className="py-3 text-center text-[12px] text-ink-3">Nobody has joined yet.</p>;
+  }
+
+  return (
+    <div className="mt-3 space-y-1.5 border-t border-white/6 pt-3">
+      {data.map((row, i) => (
+        <div key={row.user.id} className="flex items-center gap-2.5">
+          <span className="w-4 text-center text-[11px] font-bold text-ink-3">{i + 1}</span>
+          <Avatar user={row.user} size={24} />
+          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink">
+            {row.user.displayName}
+          </span>
+          {row.completed && <span className="text-[11px] font-extrabold text-volt">DONE</span>}
+          <span className="text-[12px] font-bold text-ink-2 tabular-nums">{fmt(row.progress)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function ChallengesPage() {
   const qc = useQueryClient();
+  const [openStandings, setOpenStandings] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ['challenges'],
     queryFn: () => get<Challenge[]>('/challenges'),
@@ -86,6 +120,15 @@ export function ChallengesPage() {
                   Join challenge
                 </button>
               )}
+
+              <button
+                onClick={() => setOpenStandings(openStandings === c.id ? null : c.id)}
+                aria-expanded={openStandings === c.id}
+                className="mt-3 text-[12px] font-semibold text-ink-3 transition-colors hover:text-ink-2"
+              >
+                {openStandings === c.id ? '▾ Hide standings' : '▸ Standings'}
+              </button>
+              {openStandings === c.id && <Standings challenge={c} />}
             </div>
           );
         })}
