@@ -78,17 +78,27 @@ device, that AsyncStorage really persists across a restart, or that
 `react-native-maps` / `expo-location` load at all. Detox covers that by driving
 a real build on an emulator.
 
-Needs the JDK, the Android SDK, and an AVD. Point `DETOX_AVD_NAME` at your own
-AVD if it is not called `Medium_Phone`. **The API must be running** — the app
-reaches the host at `10.0.2.2:4000` from the emulator — and the demo account
-must be seeded.
+Needs the JDK, the Android SDK, and a **4 KB-page emulator** (API level ≤ 35, or
+any image without the `page_size_16kb` tag). On a 16 KB-page image the system
+shows a compatibility dialog — RN 0.76's prebuilt `.so` libs aren't 16 KB
+aligned — and that dialog steals window focus, so every Detox interaction times
+out. Point `DETOX_AVD_NAME` at your AVD if it isn't called `Medium_Phone`.
+**The API must be running** — the app reaches the host at `10.0.2.2:4000` from
+the emulator — and the demo account must be seeded (`SEED_DEMO=true npm run db:seed`).
 
 ```bash
 cd apps/mobile
 npm run e2e:prebuild   # generate ./android from app.json (not committed)
-npm run e2e:build      # assemble the debug + androidTest APKs
-npm run e2e            # run the specs on the emulator
+# boot a 4 KB-page emulator first, e.g.  emulator -avd <name>
+npm run e2e:build      # assemble the release app + androidTest APKs
+DETOX_AVD_NAME=<name> npm run e2e   # run the specs on the emulator
 ```
+
+The default configuration is **release** (JS bundled in, no Metro) — the
+reliable path for E2E. `e2e:build:debug` / `e2e:debug` use a debug build instead,
+which needs `npx expo start` running for the Metro bundle. The specs disable
+Detox synchronization around the map screens (react-native-maps never reports
+"idle") and poll with `waitFor`.
 
 iOS configurations are deliberately absent: building them needs Xcode, so they
 cannot run on Windows or on a Linux CI runner. Add them alongside the Android

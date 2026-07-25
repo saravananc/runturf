@@ -127,7 +127,10 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_5
-          avd-name: Medium_Phone # must match .detoxrc.js
+          avd-name: Medium_Phone # must match .detoxrc.js default
+          # API 31 is a 4 KB-page image, so RN 0.76's unaligned .so libs don't
+          # trigger the 16 KB compatibility dialog that would steal window focus.
+          disable-animations: true # Detox interactions need a settled UI
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: apps/mobile
           script: |

@@ -36,7 +36,12 @@ module.exports = {
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
-      build: `${gradle} -p android assembleDebug assembleAndroidTest -DtestBuildType=debug`,
+      // Scope to :app:. The bare assembleAndroidTest also builds androidTest
+      // variants for every library module, and react-native-screens' variant
+      // trips a duplicate libfbjni.so merge. Detox only needs the app's two
+      // APKs, and :app:assembleAndroidTest depends on the libraries' *main*
+      // variants, so it sidesteps that entirely.
+      build: `${gradle} -p android :app:assembleDebug :app:assembleAndroidTest -DtestBuildType=debug`,
       reversePorts: [
         8081, // Metro, for the debug build's JS bundle
       ],
@@ -46,7 +51,7 @@ module.exports = {
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
-      build: `${gradle} -p android assembleRelease assembleAndroidTest -DtestBuildType=release`,
+      build: `${gradle} -p android :app:assembleRelease :app:assembleAndroidTest -DtestBuildType=release`,
     },
   },
   devices: {
