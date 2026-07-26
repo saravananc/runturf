@@ -25,7 +25,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 
 | Epic | Completed features |
 |---|---|
-| **01 Foundation** | Architecture, Project Setup, Config (zod env), Env, Logging (pino + `pino-http` wired `5687af1`), CI/CD, Docker (API Dockerfile + compose `0979d83`) |
+| **01 Foundation** | Architecture, Project Setup, Config (zod env), Env, Logging (pino + `pino-http` wired `5687af1`), CI/CD, Docker (API Dockerfile + compose `0979d83`), Monitoring (Sentry crash reporting + first-party analytics `3e3854f`) |
 | **02 Auth** | Register, Login, JWT (access 15 m + refresh 30 d rotation **+ logout revocation** `35f726e`), Profile (PATCH + edit UI `5687af1`) |
 | **03 GPS/Maps** | GPS (watchPosition + mobile), Map rendering (MapLibre/OSM), Permissions, Foreground Tracking |
 | **04 Runs** | Run CRUD, PB detection, History (+7-day chart), Export (GPX), **Import (GPX `121f903`)**, Stats |
@@ -34,9 +34,9 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **07 Territory** | Capture engine, Grid (slippy-tile z18), Ownership (new/steal/retain), History (`cell_captures`), Rendering (viewport GeoJSON), Scoring (turf leaderboard) |
 | **08 Clubs** | Clubs (create/join/leave), Chat, Members (ownership succession), Rankings, **Invites + Moderation (`1d59aab`)** |
 | **09 Rewards** | Achievements (12), Levels, Streaks (+ freeze), XP, **Coins (accrual + shop spending `298e886`)** |
-| **10 QA/Release** | Testing (221 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README) |
+| **10 QA/Release** | Testing (232 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`) |
 
-**~54 of 81 features fully done.**
+**~56 of 81 features fully done.**
 
 ---
 
@@ -50,10 +50,10 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **06 Challenges** | Events, Notifications, Push, Reminders | Mixed; needs custom dev-client |
 | **07 Territory** | Conflict (decay rules), Rules, Admin tools | Medium |
 | **08 Clubs** | Events, Battles (scheduled head-to-head) | Medium |
-| **10 QA/Release** | Analytics, Crash reporting, Performance, Accessibility, Store (app-store release) | 20 High tasks concentrated here |
+| **10 QA/Release** | Performance, Accessibility, Store (app-store release) | 20 High tasks concentrated here |
 | **02 Auth** | Settings (dedicated user/privacy settings) | Medium |
 
-**~23 features unstarted**, concentrated in **03 (GPS depth), 06 (push/events), 10 (release breadth)**.
+**~21 features unstarted**, concentrated in **03 (GPS depth), 06 (push/events), 10 (release breadth)**.
 
 ---
 
@@ -61,7 +61,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 
 | Epic · Feature | Done | Missing |
 |---|---|---|
-| 01 · Monitoring | Process crash handlers (`index.ts:7`) | External monitoring/observability, analytics |
+| 10 · Crash reporting | Sentry on API + web, env-gated (`3e3854f`) | Mobile native `@sentry/react-native` (needs prebuild + Detox re-verify) |
 | 02 · Roles | Club-level roles enforced (`requireOwner`) | Global `users.role` (site-admin) still unenforced |
 | 03 · Location Sync | Batch point submission on run save | Live/background sync |
 | 07 · Sync | Viewport GeoJSON fetch/render | Full territory sync semantics |
@@ -86,7 +86,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 **Backlog features with no implementation yet:** all Pending items in §2
 (Background, Battery, Geofence, Offline, Routes, Filters, Search, Privacy,
 Sharing, Events, Notifications, Push, Reminders, Conflict, Rules, Admin, Battles,
-Analytics, Crash, Performance, Accessibility, Store, Settings, Monitoring).
+Performance, Accessibility, Store, Settings).
 
 **Deviation:** backlog specifies **Mapbox** (03); implementation uses
 **MapLibre/OSM** — functionally equivalent, different technology than planned.
@@ -124,7 +124,7 @@ a usable planning artifact.
 
 | Epic | Features done / total | SP | Est. completion |
 |---|---|---|---|
-| 01 Foundation | 7 + ½ (Monitoring) / 8 | 96 | **~94%** 🟢 |
+| 01 Foundation | 8 / 8 | 96 | **~100%** 🟢 |
 | 02 Auth | 4 + ½ (Roles) / 6 | 72 | **~75%** 🟡 |
 | 03 GPS/Maps | 4 + ½ (Sync) / 10 | 120 | **~45%** 🔴 |
 | 04 Runs | 6 / 8 | 96 | **~75%** 🟡 |
@@ -133,10 +133,11 @@ a usable planning artifact.
 | 07 Territory | 6 + ½ (Sync) / 10 | 120 | **~65%** 🟡 |
 | 08 Clubs | 6 / 8 | 96 | **~75%** 🟡 |
 | 09 Rewards | 5 + ½ (Badges) / 6 | 72 | **~92%** 🟢 |
-| 10 QA/Release | 3 + 1 (½ Security, ½ Release) / 10 | 120 | **~40%** 🔴 |
+| 10 QA/Release | 4 + 1½ (½ Security, ½ Release, ½ Crash) / 10 | 120 | **~55%** 🟡 |
 
-**Overall (full 10-epic vision): ~66% complete** — feature-weighted and
-SP-weighted both land at ≈66%.
+**Overall (full 10-epic vision): ~68% complete** — feature-weighted. The
+crash-reporting + analytics work (`3e3854f`) lifted Foundation to complete and
+QA/Release from ~40% to ~55%.
 
 **Overall (MVP / prioritized roadmap): ~95%+ complete** — the assessment's header
 confirms the entire prioritized roadmap (auth → GPS run → territory capture →

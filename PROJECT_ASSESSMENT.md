@@ -28,8 +28,9 @@
 > | 11. Mobile screen tests for the remaining seven screens | ✅ Done | `06e86a1` |
 > | 12. Mobile API-client tests (session, refresh rotation, revocation) | ✅ Done | `467e39b` |
 > | 13. Detox device tests (Android) — 8 specs, green on a real emulator | ✅ Done | `4c1be1d` |
+> | 14. Crash reporting (Sentry, API + web) + first-party analytics (all surfaces) | ✅ Done | `3e3854f` |
 >
-> **Test count: 55 → 221** (39 shared + 73 API + 26 web + 75 mobile jest + 8
+> **Test count: 55 → 232** (40 shared + 78 API + 29 web + 77 mobile jest + 8
 > Detox device). Mobile CI: typecheck, expo-doctor, jest, dual-platform bundle,
 > plus a separate `mobile-e2e` job running Detox on an emulator against a live API.
 > All 9 mobile screens and the API client have unit coverage; the app is also
@@ -41,8 +42,14 @@
 > **Not started (net-new features, none blocking):**
 > push notifications · background GPS tracking · offline maps · geofence ·
 > saved/reusable routes · club events / scheduled battles ·
-> social sharing & privacy settings · analytics · crash reporting · app-store release.
+> social sharing & privacy settings · app-store release.
 > *(Push and background tracking need a custom Expo dev-client, not Expo Go.)*
+>
+> **Crash reporting + analytics done (`14`, `3e3854f`):** Sentry on API + web
+> (env-gated, no-op without a DSN) and a first-party analytics pipeline (shared
+> event contract → `POST /events` → `analytics_events`) wired on all surfaces.
+> Only mobile *native* crash reporting (`@sentry/react-native`) is outstanding —
+> it needs a prebuild + rebuild + Detox re-verify.
 >
 > **Known-but-unfixed minor items** (from the findings below):
 > - Risk #4 — tokens still in `localStorage`; **mitigated** (logout revocation,
