@@ -1,6 +1,7 @@
 import type { RunReport } from '@runturf/shared';
 import maplibregl from 'maplibre-gl';
 import { useRef, useState } from 'react';
+import { track } from '../api/analytics';
 import { post } from '../api/client';
 import { MapView } from '../components/MapView';
 import { RunReportModal } from '../components/RunReportModal';
@@ -96,6 +97,11 @@ export function RecordPage() {
         pausedMs,
       });
       setReport(rep);
+      track('run_submitted', {
+        distanceM: rep.run.distanceM,
+        cellsCaptured: rep.run.cellsCaptured,
+        cellsStolen: rep.run.cellsStolen,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save run');
     } finally {

@@ -1,5 +1,6 @@
 import type { PurchaseResult, ShopView } from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { track } from '../api/analytics';
 import { get, post } from '../api/client';
 import { CoinIcon } from '../components/icons';
 import { EmptyState } from '../components/ui';
@@ -15,7 +16,8 @@ export function ShopPage() {
 
   const buy = useMutation({
     mutationFn: (code: string) => post<PurchaseResult>(`/shop/${code}/buy`),
-    onSuccess: () => {
+    onSuccess: (_res, code) => {
+      track('shop_item_purchased', { code });
       // Balance shows on Profile too; refresh both.
       qc.invalidateQueries({ queryKey: ['shop'] });
       qc.invalidateQueries({ queryKey: ['stats'] });

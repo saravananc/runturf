@@ -2,6 +2,7 @@ import type { PurchaseResult, ShopView } from '@runturf/shared';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { track } from '../analytics';
 import { get, post } from '../api';
 import { Btn, Card, Empty, Loading, ScreenTitle } from '../components/ui';
 import { colors, font, space, type } from '../theme';
@@ -30,6 +31,7 @@ export function ShopScreen() {
     setBuying(code);
     try {
       const res = await post<PurchaseResult>(`/shop/${code}/buy`);
+      track('shop_item_purchased', { code });
       // Optimistically reflect the new balance/owned, then refetch.
       setShop((s) =>
         s

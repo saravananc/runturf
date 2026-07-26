@@ -2,6 +2,7 @@ import type { Challenge, ChallengeStanding } from '@runturf/shared';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { track } from '../analytics';
 import { get, post } from '../api';
 import {
   Avatar,
@@ -79,6 +80,7 @@ export function ChallengesScreen() {
     setJoining(id);
     try {
       await post(`/challenges/${id}/join`);
+      track('challenge_joined', { id });
       await load();
     } catch (err) {
       Alert.alert('Could not join', err instanceof Error ? err.message : 'Network error');

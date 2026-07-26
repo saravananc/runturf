@@ -1,6 +1,7 @@
 import type { Challenge, ChallengeStanding } from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { track } from '../api/analytics';
 import { get, post } from '../api/client';
 import { CoinIcon, TargetIcon } from '../components/icons';
 import { Avatar, EmptyState } from '../components/ui';
@@ -47,7 +48,10 @@ export function ChallengesPage() {
   });
   const join = useMutation({
     mutationFn: (id: string) => post(`/challenges/${id}/join`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['challenges'] }),
+    onSuccess: (_res, id) => {
+      track('challenge_joined', { id });
+      qc.invalidateQueries({ queryKey: ['challenges'] });
+    },
   });
 
   return (

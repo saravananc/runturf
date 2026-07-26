@@ -1,5 +1,6 @@
 import type { AuthResponse, UserPublic } from '@runturf/shared';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { track } from '../api/analytics';
 import { get, hasSession, post, revokeSession, setTokens } from '../api/client';
 
 interface AuthState {
@@ -32,12 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = await post<AuthResponse>('/auth/login', { username, password });
     setTokens(auth);
     setUser(auth.user);
+    track('user_signed_in');
   }
 
   async function register(username: string, password: string, displayName?: string) {
     const auth = await post<AuthResponse>('/auth/register', { username, password, displayName });
     setTokens(auth);
     setUser(auth.user);
+    track('user_registered');
   }
 
   function logout() {

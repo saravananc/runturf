@@ -132,6 +132,28 @@ docker compose --profile app up --build
 | `JWT_SECRET` | ≥16 chars; use a strong random value (`openssl rand -base64 48`) |
 | `CORS_ORIGIN` | Comma-separated allowed web origins |
 | `NODE_ENV=production` | Disables demo seeding, enables `trust proxy`, concise logs |
+| `SENTRY_DSN` | Optional. Crash reporting; unset = disabled (no-op) |
+
+### Observability & analytics
+
+Crash reporting is [Sentry](https://sentry.io), wired on all three surfaces and
+**disabled unless a DSN is set**, so dev, tests, and CI never emit:
+
+| Surface | Env var |
+|---|---|
+| API | `SENTRY_DSN` |
+| Web | `VITE_SENTRY_DSN` (build-time) |
+| Mobile | `EXPO_PUBLIC_SENTRY_DSN` *(wiring pending — see note)* |
+
+Product analytics is **first-party**: clients batch events to `POST /events`,
+which persists them to `analytics_events` (attributing to the signed-in user
+server-side, never from the body). The event set lives in
+[`packages/shared/src/analytics.ts`](packages/shared/src/analytics.ts); no
+external account is required to run it.
+
+> Mobile *crash* reporting (`@sentry/react-native`) is a native module that
+> needs a prebuild + rebuild and a Detox re-verify, so it is tracked separately.
+> Mobile analytics (pure HTTP) is already wired.
 
 Run migrations and reference-data seeding as a one-off release step (these need
 the dev tooling, so run them from a full `npm ci` checkout pointed at the prod DB):

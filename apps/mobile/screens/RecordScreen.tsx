@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Animated, StyleSheet, Text, View } from 'react-native';
 import MapView, { Polyline, UrlTile, type Region } from 'react-native-maps';
 import { useAuth } from '../AuthContext';
+import { track } from '../analytics';
 import { post } from '../api';
 import { Btn, Label } from '../components/ui';
 import { formatDistance, formatDuration, formatPace } from '../format';
@@ -69,6 +70,11 @@ export function RecordScreen() {
         pausedMs,
       });
       setReport(rep);
+      track('run_submitted', {
+        distanceM: rep.run.distanceM,
+        cellsCaptured: rep.run.cellsCaptured,
+        cellsStolen: rep.run.cellsStolen,
+      });
       if (region) load(region);
     } catch (err) {
       Alert.alert('Save failed', err instanceof Error ? err.message : 'Network error');

@@ -268,3 +268,27 @@ export const challengeParticipants = pgTable(
     uniqueIndex('challenge_user_idx').on(t.challengeId, t.userId),
   ],
 );
+
+/**
+ * First-party product-analytics events. userId is nullable so pre-login events
+ * (e.g. app_opened) can still be recorded; it is set server-side from the bearer
+ * token when present, never trusted from the client body.
+ */
+export const analyticsEvents = pgTable(
+  'analytics_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    source: text('source').notNull(), // 'web' | 'mobile' | 'api'
+    props: jsonb('props'), // AnalyticsProps | null
+    /** Client-reported event time; may be null. */
+    clientTs: timestamp('client_ts', { withTimezone: true }),
+    /** Server receipt time — the trustworthy timestamp for querying. */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('analytics_name_created_idx').on(t.name, t.createdAt),
+    index('analytics_user_idx').on(t.userId),
+  ],
+);

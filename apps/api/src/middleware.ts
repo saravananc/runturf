@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { z, ZodError, type ZodSchema } from 'zod';
 import { HttpError, unauthorized } from './errors.js';
 import { logger } from './logger.js';
+import { captureException } from './observability.js';
 import { verifyAccessToken } from './services/auth.js';
 
 declare module 'express-serve-static-core' {
@@ -19,6 +20,23 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   } catch (err) {
     next(err);
   }
+}
+
+/**
+ * Attaches req.userId when a valid bearer token is present, but never rejects:
+ * an absent or invalid token just leaves the request anonymous. For endpoints
+ * that work with or without a signed-in user (e.g. analytics ingestion).
+ */
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      req.userId = verifyAccessToken(header.slice(7));
+    } catch {
+      // Invalid/expired token → treat as anonymous rather than failing.
+    }
+  }
+  next();
 }
 
 /** Wraps an async handler so rejections reach the error middleware. */
@@ -50,6 +68,9 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: 'Validation failed', details: err.flatten() });
     return;
   }
+  // Genuinely unexpected: log it, report it (no-op unless Sentry is configured),
+  // and return an opaque 500.
   logger.error(err, 'Unhandled error');
+  captureException(err);
   res.status(500).json({ error: 'Internal server error' });
 }

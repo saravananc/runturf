@@ -9,7 +9,9 @@ import {
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import { track } from './analytics';
 import { AuthProvider, useAuth } from './AuthContext';
 import { Loading } from './components/ui';
 import { ChallengesScreen } from './screens/ChallengesScreen';
@@ -114,6 +116,10 @@ export default function App() {
     Inter_700Bold,
     Inter_800ExtraBold,
   });
+
+  useEffect(() => {
+    track('app_opened');
+  }, []);
 
   if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: colors.base }} />;
 
