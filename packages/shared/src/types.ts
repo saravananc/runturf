@@ -188,6 +188,30 @@ export interface ClubMessage {
   createdAt: string;
 }
 
+/** Minimal club identity for battle cards. */
+export interface ClubBattleClub {
+  id: string;
+  name: string;
+  tag: string;
+  color: string;
+}
+
+export interface ClubBattle {
+  id: string;
+  status: 'proposed' | 'active' | 'finished' | 'declined';
+  challenger: ClubBattleClub;
+  opponent: ClubBattleClub;
+  /** Cells captured in the window — live while active, frozen once finished. */
+  challengerScore: number;
+  opponentScore: number;
+  durationHours: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** Set when finished; null on a tie. */
+  winnerClubId: string | null;
+  createdAt: string;
+}
+
 export interface ChallengeStanding {
   user: UserPublic;
   progress: number;

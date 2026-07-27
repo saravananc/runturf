@@ -9,10 +9,13 @@ import {
   joinClub,
   kickMember,
   leaveClub,
+  listClubBattles,
   listClubs,
   listMessages,
   listMyInvites,
   postMessage,
+  proposeBattle,
+  respondToBattle,
   respondToInvite,
   transferOwnership,
 } from '../services/clubs.js';
@@ -79,10 +82,38 @@ clubsRouter.post(
   }),
 );
 
+// Battle routes with fixed prefixes MUST precede `/:id` so the param route
+// doesn't swallow them.
+clubsRouter.post(
+  '/battles',
+  h(async (req, res) => {
+    const { opponentClubId, durationHours } = parseBody(
+      z.object({ opponentClubId: z.string().uuid(), durationHours: z.number().int().min(1).max(168) }),
+      req.body,
+    );
+    res.status(201).json(await proposeBattle(req.userId, opponentClubId, durationHours));
+  }),
+);
+
+clubsRouter.post(
+  '/battles/:battleId/respond',
+  h(async (req, res) => {
+    const { accept } = parseBody(z.object({ accept: z.boolean() }), req.body);
+    res.json(await respondToBattle(req.userId, idParam(req.params.battleId), accept));
+  }),
+);
+
 clubsRouter.get(
   '/:id',
   h(async (req, res) => {
     res.json(await getClub(req.userId, idParam(req.params.id)));
+  }),
+);
+
+clubsRouter.get(
+  '/:id/battles',
+  h(async (req, res) => {
+    res.json(await listClubBattles(idParam(req.params.id)));
   }),
 );
 

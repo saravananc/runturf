@@ -1,4 +1,6 @@
 import type {
+  ClubBattle,
+  ClubBattleClub,
   ClubDetail,
   ClubInvite,
   ClubMessage,
@@ -475,6 +477,8 @@ function MyClub({ club, onChanged }: { club: ClubDetail; onChanged: () => void }
         </View>
       </Card>
 
+      <ClubBattles club={club} isOwner={isOwner} />
+
       <Card style={{ marginTop: space(3), padding: 0, overflow: 'hidden' }}>
         <Text style={s.chatHeader}>Club chat</Text>
         <FlatList
@@ -723,6 +727,158 @@ function ClubStat({ label, value, volt }: { label: string; value: string; volt?:
   );
 }
 
+function battleTimeLeft(endsAt: string): string {
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (ms <= 0) return 'ending…';
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+}
+
+function BattleSide({ club, score }: { club: ClubBattleClub; score: number }) {
+  return (
+    <View style={s.battleSide}>
+      <View style={[s.battleBadge, { backgroundColor: club.color }]}>
+        <Text style={s.battleBadgeTag}>{club.tag}</Text>
+      </View>
+      <Text style={s.battleScore}>{score}</Text>
+    </View>
+  );
+}
+
+function ClubBattles({ club, isOwner }: { club: ClubDetail; isOwner: boolean }) {
+  const [battles, setBattles] = useState<ClubBattle[]>([]);
+  const [others, setOthers] = useState<ClubSummary[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setBattles(await get<ClubBattle[]>(`/clubs/${club.id}/battles`));
+    } catch {
+      /* keep what we have */
+    }
+  }, [club.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      if (isOwner) {
+        get<ClubSummary[]>('/clubs')
+          .then((cs) => setOthers(cs.filter((c) => c.id !== club.id)))
+          .catch(() => {});
+      }
+      const id = setInterval(load, 10_000);
+      return () => clearInterval(id);
+    }, [load, isOwner, club.id]),
+  );
+
+  async function propose(opponentClubId: string) {
+    setBusy(true);
+    try {
+      await post('/clubs/battles', { opponentClubId, durationHours: 24 });
+      await load();
+    } catch (e) {
+      Alert.alert('Could not start battle', e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function respond(id: string, accept: boolean) {
+    setBusy(true);
+    try {
+      await post(`/clubs/battles/${id}/respond`, { accept });
+      await load();
+    } catch (e) {
+      Alert.alert('Failed', e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const active = battles.filter((b) => b.status === 'active');
+  const proposed = battles.filter((b) => b.status === 'proposed');
+  const finished = battles.filter((b) => b.status === 'finished').slice(0, 5);
+  // Clubs already tied up in an open battle with us can't be challenged again.
+  const engaged = new Set(
+    battles
+      .filter((b) => b.status === 'proposed' || b.status === 'active')
+      .flatMap((b) => [b.challenger.id, b.opponent.id]),
+  );
+  const challengeable = others.filter((c) => !engaged.has(c.id)).slice(0, 4);
+
+  function BattleCard({ b }: { b: ClubBattle }) {
+    const canRespond = isOwner && b.status === 'proposed' && b.opponent.id === club.id;
+    const iAmChallenger = b.challenger.id === club.id;
+    const won = b.status === 'finished' && b.winnerClubId === club.id;
+    const lost = b.status === 'finished' && !!b.winnerClubId && b.winnerClubId !== club.id;
+    const tie = b.status === 'finished' && !b.winnerClubId;
+    return (
+      <View style={s.battleCard}>
+        <View style={s.battleRow}>
+          <BattleSide club={b.challenger} score={b.challengerScore} />
+          <Text style={s.battleVs}>VS</Text>
+          <BattleSide club={b.opponent} score={b.opponentScore} />
+        </View>
+        <Text
+          style={[
+            s.battleStatus,
+            b.status === 'active' && { color: colors.volt },
+            won && { color: colors.gold },
+          ]}
+        >
+          {b.status === 'active' && b.endsAt && `● Live · ${battleTimeLeft(b.endsAt)}`}
+          {b.status === 'proposed' && (iAmChallenger ? 'Awaiting their answer' : 'Challenge received')}
+          {won && '🏆 Your club won — +100 coins each'}
+          {lost && 'Defeated'}
+          {tie && 'Tie — no winner'}
+        </Text>
+        {canRespond && (
+          <View style={s.battleActions}>
+            <Btn label="Accept" size="sm" disabled={busy} onPress={() => respond(b.id, true)} />
+            <Btn
+              label="Decline"
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onPress={() => respond(b.id, false)}
+            />
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <Card style={{ marginTop: space(3) }}>
+      <Text style={s.battleTitle}>Turf wars</Text>
+      {isOwner && challengeable.length > 0 && (
+        <View style={{ gap: space(2), marginBottom: space(2) }}>
+          {challengeable.map((c) => (
+            <View key={c.id} style={s.challengeRow}>
+              <View style={[s.battleBadge, { backgroundColor: c.color }]}>
+                <Text style={s.battleBadgeTag}>{c.tag}</Text>
+              </View>
+              <Text style={s.challengeName} numberOfLines={1}>
+                {c.name}
+              </Text>
+              <Btn label="⚔ 24h" size="sm" disabled={busy} onPress={() => propose(c.id)} />
+            </View>
+          ))}
+        </View>
+      )}
+      {[...active, ...proposed, ...finished].map((b) => (
+        <BattleCard key={b.id} b={b} />
+      ))}
+      {battles.length === 0 && challengeable.length === 0 && (
+        <Text style={s.timestamp}>
+          {isOwner ? 'Challenge a rival club to a turf war.' : 'No battles yet.'}
+        </Text>
+      )}
+    </Card>
+  );
+}
+
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.base },
   content: { padding: space(4), paddingBottom: space(10) },
@@ -780,6 +936,30 @@ const s = StyleSheet.create({
   },
   clubStatLabel: { fontFamily: font.semibold, fontSize: type.label, letterSpacing: 0.9, color: colors.ink3 },
   clubStatValue: { fontFamily: font.extrabold, fontSize: type.body, color: colors.ink },
+
+  battleTitle: { fontFamily: font.bold, fontSize: type.small, color: colors.ink, marginBottom: space(2) },
+  battleCard: {
+    backgroundColor: colors.elev2,
+    borderRadius: radius.ctl,
+    padding: space(3),
+    marginTop: space(2),
+  },
+  battleRow: { flexDirection: 'row', alignItems: 'center' },
+  battleSide: { flex: 1, alignItems: 'center', gap: space(1) },
+  battleBadge: { width: 30, height: 30, borderRadius: radius.ctl, alignItems: 'center', justifyContent: 'center' },
+  battleBadgeTag: { fontFamily: font.extrabold, fontSize: 11, color: colors.base },
+  battleScore: { fontFamily: font.extrabold, fontSize: 16, color: colors.volt },
+  battleVs: { fontFamily: font.extrabold, fontSize: type.label, color: colors.ink3, marginHorizontal: space(2) },
+  battleStatus: {
+    fontFamily: font.semibold,
+    fontSize: type.label,
+    color: colors.ink3,
+    textAlign: 'center',
+    marginTop: space(2),
+  },
+  battleActions: { flexDirection: 'row', gap: space(2), justifyContent: 'center', marginTop: space(2) },
+  challengeRow: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
+  challengeName: { flex: 1, fontFamily: font.semibold, fontSize: type.small, color: colors.ink },
 
   chatHeader: {
     fontFamily: font.bold,

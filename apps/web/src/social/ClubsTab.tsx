@@ -1,4 +1,11 @@
-import type { ClubDetail, ClubInvite, ClubMessage, ClubSummary } from '@runturf/shared';
+import type {
+  ClubBattle,
+  ClubBattleClub,
+  ClubDetail,
+  ClubInvite,
+  ClubMessage,
+  ClubSummary,
+} from '@runturf/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { del, get, post } from '../api/client';
@@ -109,6 +116,8 @@ function MyClub({ club }: { club: ClubDetail }) {
           {notice && <p className="mt-2 text-[12px] font-semibold text-volt">{notice}</p>}
         </form>
       )}
+
+      <ClubBattles club={club} isOwner={isOwner} />
 
       <ClubChat clubId={club.id} />
 
@@ -402,6 +411,204 @@ function BrowseClubs() {
         </div>
       </section>
     </div>
+  );
+}
+
+/* ---------- battles ---------- */
+
+function timeLeft(endsAt: string): string {
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (ms <= 0) return 'ending…';
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+}
+
+function BattleSide({ club, score, right }: { club: ClubBattleClub; score: number; right?: boolean }) {
+  return (
+    <div className={`flex min-w-0 flex-1 items-center gap-2 ${right ? 'flex-row-reverse text-right' : ''}`}>
+      <ClubBadge club={club} size={28} />
+      <div className="min-w-0">
+        <div className="truncate text-[12px] font-bold text-ink">{club.name}</div>
+        <div className="text-[16px] font-extrabold tabular-nums text-volt">{score}</div>
+      </div>
+    </div>
+  );
+}
+
+function BattleCard({
+  club,
+  battle,
+  action,
+}: {
+  club: ClubDetail;
+  battle: ClubBattle;
+  action?: { accept: () => void; decline: () => void; pending: boolean };
+}) {
+  const iAmChallenger = battle.challenger.id === club.id;
+  const won = battle.status === 'finished' && battle.winnerClubId === club.id;
+  const lost =
+    battle.status === 'finished' && !!battle.winnerClubId && battle.winnerClubId !== club.id;
+  const tie = battle.status === 'finished' && !battle.winnerClubId;
+
+  return (
+    <div className="rounded-xl bg-elev2 p-3">
+      <div className="flex items-center gap-2">
+        <BattleSide club={battle.challenger} score={battle.challengerScore} />
+        <span className="shrink-0 text-[11px] font-black text-ink-3">VS</span>
+        <BattleSide club={battle.opponent} score={battle.opponentScore} right />
+      </div>
+      <div className="mt-2 text-center text-[11px] font-semibold">
+        {battle.status === 'active' && battle.endsAt && (
+          <span className="text-volt">● Live · {timeLeft(battle.endsAt)}</span>
+        )}
+        {battle.status === 'proposed' && (
+          <span className="text-ink-3">
+            {iAmChallenger ? 'Awaiting their answer' : 'Challenge received'}
+          </span>
+        )}
+        {won && <span className="text-gold">🏆 Your club won — +100 coins each</span>}
+        {lost && <span className="text-ink-3">Defeated</span>}
+        {tie && <span className="text-ink-3">Tie — no winner</span>}
+      </div>
+      {action && (
+        <div className="mt-2.5 flex gap-2">
+          <button
+            onClick={action.accept}
+            disabled={action.pending}
+            className="btn btn-primary flex-1 py-1.5 text-[12px]"
+          >
+            Accept
+          </button>
+          <button
+            onClick={action.decline}
+            disabled={action.pending}
+            className="btn btn-ghost flex-1 py-1.5 text-[12px]"
+          >
+            Decline
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProposeBattle({ club, onProposed }: { club: ClubDetail; onProposed: () => void }) {
+  const [opponent, setOpponent] = useState('');
+  const [hours, setHours] = useState(24);
+  const [error, setError] = useState('');
+  const { data: clubs } = useQuery({ queryKey: ['clubs'], queryFn: () => get<ClubSummary[]>('/clubs') });
+  const others = clubs?.filter((c) => c.id !== club.id) ?? [];
+
+  const propose = useMutation({
+    mutationFn: () => post('/clubs/battles', { opponentClubId: opponent, durationHours: hours }),
+    onSuccess: () => {
+      setOpponent('');
+      onProposed();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : 'Could not start the battle'),
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError('');
+        if (opponent) propose.mutate();
+      }}
+      className="space-y-2"
+    >
+      <div className="flex gap-2">
+        <select
+          className="input flex-1 py-2 text-[13px]"
+          value={opponent}
+          onChange={(e) => {
+            setOpponent(e.target.value);
+            setError('');
+          }}
+        >
+          <option value="">Challenge a club…</option>
+          {others.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="input py-2 text-[13px]"
+          value={hours}
+          onChange={(e) => setHours(Number(e.target.value))}
+        >
+          <option value={24}>24h</option>
+          <option value={48}>48h</option>
+          <option value={72}>72h</option>
+          <option value={168}>7d</option>
+        </select>
+        <button
+          disabled={propose.isPending || !opponent}
+          className="btn btn-primary px-4 py-2 text-[13px]"
+        >
+          Go
+        </button>
+      </div>
+      {error && <p className="text-[12px] font-medium text-ember">{error}</p>}
+    </form>
+  );
+}
+
+function ClubBattles({ club, isOwner }: { club: ClubDetail; isOwner: boolean }) {
+  const qc = useQueryClient();
+  const { data: battles } = useQuery({
+    queryKey: ['clubBattles', club.id],
+    queryFn: () => get<ClubBattle[]>(`/clubs/${club.id}/battles`),
+    refetchInterval: 10_000, // keep live scores and remaining time fresh
+  });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['clubBattles', club.id] });
+  const respond = useMutation({
+    mutationFn: ({ id, accept }: { id: string; accept: boolean }) =>
+      post(`/clubs/battles/${id}/respond`, { accept }),
+    onSuccess: refresh,
+  });
+
+  const active = battles?.filter((b) => b.status === 'active') ?? [];
+  const proposed = battles?.filter((b) => b.status === 'proposed') ?? [];
+  const finished = (battles?.filter((b) => b.status === 'finished') ?? []).slice(0, 5);
+
+  return (
+    <section className="card space-y-2.5 p-3">
+      <SectionHeading>Turf wars</SectionHeading>
+      {isOwner && <ProposeBattle club={club} onProposed={refresh} />}
+      {active.map((b) => (
+        <BattleCard key={b.id} club={club} battle={b} />
+      ))}
+      {proposed.map((b) => {
+        const canRespond = isOwner && b.opponent.id === club.id;
+        return (
+          <BattleCard
+            key={b.id}
+            club={club}
+            battle={b}
+            action={
+              canRespond
+                ? {
+                    accept: () => respond.mutate({ id: b.id, accept: true }),
+                    decline: () => respond.mutate({ id: b.id, accept: false }),
+                    pending: respond.isPending,
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
+      {finished.map((b) => (
+        <BattleCard key={b.id} club={club} battle={b} />
+      ))}
+      {battles && battles.length === 0 && (
+        <p className="py-1 text-[12px] text-ink-3">
+          {isOwner ? 'Challenge a rival club to a turf war.' : 'No battles yet.'}
+        </p>
+      )}
+    </section>
   );
 }
 

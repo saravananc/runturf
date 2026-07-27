@@ -294,3 +294,35 @@ export const analyticsEvents = pgTable(
     index('analytics_user_idx').on(t.userId),
   ],
 );
+
+/**
+ * Head-to-head club battles. A club owner proposes; the challenged club's owner
+ * accepts (starting the window) or declines. The score is each side's cells
+ * captured within [starts_at, ends_at] — computed live from cell_captures while
+ * active, then frozen onto the row when the battle finishes.
+ */
+export const clubBattles = pgTable(
+  'club_battles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    challengerClubId: uuid('challenger_club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    opponentClubId: uuid('opponent_club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('proposed'), // proposed | active | finished | declined
+    durationHours: integer('duration_hours').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }), // set on accept
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    challengerScore: integer('challenger_score').notNull().default(0), // frozen on finish
+    opponentScore: integer('opponent_score').notNull().default(0),
+    winnerClubId: uuid('winner_club_id').references(() => clubs.id, { onDelete: 'set null' }), // null = tie
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('battles_challenger_idx').on(t.challengerClubId),
+    index('battles_opponent_idx').on(t.opponentClubId),
+    index('battles_status_idx').on(t.status),
+  ],
+);

@@ -1,14 +1,17 @@
 import {
   isoWeekStart,
+  type ClubBattle,
+  type ClubBattleClub,
   type ClubDetail,
   type ClubInvite,
   type ClubMessage,
   type ClubSummary,
 } from '@runturf/shared';
-import { and, asc, count, desc, eq, gte, ilike, inArray, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import {
   cellCaptures,
+  clubBattles,
   clubInvites,
   clubMembers,
   clubMessages,
@@ -328,4 +331,192 @@ export async function transferOwnership(
       .where(and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, ownerId)));
     await tx.update(clubs).set({ ownerId: targetId }).where(eq(clubs.id, clubId));
   });
+}
+
+/* ---------- club battles (owner-proposed head-to-head turf wars) ---------- */
+
+/** Coins awarded to each member of the winning club when a battle finishes. */
+const BATTLE_REWARD_COINS = 100;
+
+/** Cells a club's members captured in [from, to] — a side's battle score. */
+async function battleScore(clubId: string, from: Date, to: Date): Promise<number> {
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(cellCaptures)
+    .innerJoin(clubMembers, eq(clubMembers.userId, cellCaptures.newOwnerId))
+    .where(
+      and(
+        eq(clubMembers.clubId, clubId),
+        gte(cellCaptures.capturedAt, from),
+        lte(cellCaptures.capturedAt, to),
+      ),
+    );
+  return Number(n);
+}
+
+function toBattleClub(c: typeof clubs.$inferSelect): ClubBattleClub {
+  return { id: c.id, name: c.name, tag: c.tag, color: c.color };
+}
+
+async function toBattle(b: typeof clubBattles.$inferSelect): Promise<ClubBattle> {
+  const [challenger, opponent] = await Promise.all([
+    db.query.clubs.findFirst({ where: eq(clubs.id, b.challengerClubId) }),
+    db.query.clubs.findFirst({ where: eq(clubs.id, b.opponentClubId) }),
+  ]);
+  let challengerScore = b.challengerScore;
+  let opponentScore = b.opponentScore;
+  // While active the score is live; the row's frozen value is only meaningful
+  // once finished.
+  if (b.status === 'active' && b.startsAt && b.endsAt) {
+    const to = new Date(Math.min(Date.now(), b.endsAt.getTime()));
+    [challengerScore, opponentScore] = await Promise.all([
+      battleScore(b.challengerClubId, b.startsAt, to),
+      battleScore(b.opponentClubId, b.startsAt, to),
+    ]);
+  }
+  return {
+    id: b.id,
+    status: b.status as ClubBattle['status'],
+    challenger: toBattleClub(challenger!),
+    opponent: toBattleClub(opponent!),
+    challengerScore,
+    opponentScore,
+    durationHours: b.durationHours,
+    startsAt: b.startsAt?.toISOString() ?? null,
+    endsAt: b.endsAt?.toISOString() ?? null,
+    winnerClubId: b.winnerClubId,
+    createdAt: b.createdAt.toISOString(),
+  };
+}
+
+/** A club owner challenges another club to a turf war of the given length. */
+export async function proposeBattle(
+  userId: string,
+  opponentClubId: string,
+  durationHours: number,
+): Promise<ClubBattle> {
+  const membership = await myMembership(userId);
+  if (!membership || membership.role !== 'owner') {
+    throw forbidden('Only a club owner can start a battle');
+  }
+  const challengerClubId = membership.clubId;
+  if (opponentClubId === challengerClubId) throw badRequest('Pick a different club to battle');
+  if (!Number.isInteger(durationHours) || durationHours < 1 || durationHours > 168) {
+    throw badRequest('Duration must be 1–168 hours');
+  }
+  const opponent = await db.query.clubs.findFirst({ where: eq(clubs.id, opponentClubId) });
+  if (!opponent) throw notFound('Opponent club not found');
+
+  // At most one open battle per pair, in either direction.
+  const open = await db.query.clubBattles.findFirst({
+    where: and(
+      inArray(clubBattles.status, ['proposed', 'active']),
+      or(
+        and(
+          eq(clubBattles.challengerClubId, challengerClubId),
+          eq(clubBattles.opponentClubId, opponentClubId),
+        ),
+        and(
+          eq(clubBattles.challengerClubId, opponentClubId),
+          eq(clubBattles.opponentClubId, challengerClubId),
+        ),
+      ),
+    ),
+  });
+  if (open) throw conflict('A battle between these clubs is already open');
+
+  const [battle] = await db
+    .insert(clubBattles)
+    .values({ challengerClubId, opponentClubId, durationHours, status: 'proposed' })
+    .returning();
+  return toBattle(battle);
+}
+
+/** The challenged club's owner accepts (starting the window) or declines. */
+export async function respondToBattle(
+  userId: string,
+  battleId: string,
+  accept: boolean,
+): Promise<ClubBattle> {
+  const battle = await db.query.clubBattles.findFirst({ where: eq(clubBattles.id, battleId) });
+  if (!battle) throw notFound('Battle not found');
+  if (battle.status !== 'proposed') throw badRequest('This battle has already been answered');
+  await requireOwner(userId, battle.opponentClubId); // only the challenged owner may respond
+
+  if (!accept) {
+    const [row] = await db
+      .update(clubBattles)
+      .set({ status: 'declined' })
+      .where(eq(clubBattles.id, battleId))
+      .returning();
+    return toBattle(row);
+  }
+  const startsAt = new Date();
+  const endsAt = new Date(startsAt.getTime() + battle.durationHours * 3_600_000);
+  const [row] = await db
+    .update(clubBattles)
+    .set({ status: 'active', startsAt, endsAt })
+    .where(eq(clubBattles.id, battleId))
+    .returning();
+  return toBattle(row);
+}
+
+/**
+ * Finishes any active battle whose window has closed: freezes each side's score,
+ * records the winner (null on a tie), and awards coins to the winners. Called
+ * lazily before listing, mirroring the challenge lifecycle. The status guard on
+ * the update makes concurrent calls settle a battle — and pay out — exactly once.
+ */
+export async function finishDueBattles(): Promise<void> {
+  const due = await db.query.clubBattles.findMany({
+    where: and(eq(clubBattles.status, 'active'), lte(clubBattles.endsAt, new Date())),
+  });
+  for (const b of due) {
+    const [challengerScore, opponentScore] = await Promise.all([
+      battleScore(b.challengerClubId, b.startsAt!, b.endsAt!),
+      battleScore(b.opponentClubId, b.startsAt!, b.endsAt!),
+    ]);
+    const winnerClubId =
+      challengerScore === opponentScore
+        ? null
+        : challengerScore > opponentScore
+          ? b.challengerClubId
+          : b.opponentClubId;
+
+    await db.transaction(async (tx) => {
+      const [settled] = await tx
+        .update(clubBattles)
+        .set({ status: 'finished', challengerScore, opponentScore, winnerClubId })
+        .where(and(eq(clubBattles.id, b.id), eq(clubBattles.status, 'active')))
+        .returning();
+      if (!settled || !winnerClubId) return; // lost the race, or a tie: no payout
+
+      const winners = await tx
+        .select({ userId: clubMembers.userId })
+        .from(clubMembers)
+        .where(eq(clubMembers.clubId, winnerClubId));
+      if (winners.length > 0) {
+        await tx
+          .update(userStats)
+          .set({ coins: sql`${userStats.coins} + ${BATTLE_REWARD_COINS}` })
+          .where(
+            inArray(
+              userStats.userId,
+              winners.map((w) => w.userId),
+            ),
+          );
+      }
+    });
+  }
+}
+
+/** All battles a club is part of (newest first), settling any that are due. */
+export async function listClubBattles(clubId: string): Promise<ClubBattle[]> {
+  await finishDueBattles();
+  const rows = await db.query.clubBattles.findMany({
+    where: or(eq(clubBattles.challengerClubId, clubId), eq(clubBattles.opponentClubId, clubId)),
+    orderBy: [desc(clubBattles.createdAt)],
+    limit: 50,
+  });
+  return Promise.all(rows.map(toBattle));
 }
