@@ -32,7 +32,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **05 Social** | Friends, Requests, Feed, Search, Leaderboard, Profiles |
 | **06 Challenges** | Challenges (join/progress/complete), Rewards, **Scheduler (weekly lifecycle `600dbd3`)** |
 | **07 Territory** | Capture engine, Grid (slippy-tile z18), Ownership (new/steal/retain), History (`cell_captures`), Rendering (viewport GeoJSON), Scoring (turf leaderboard), Conflict (decay — turf fades if not revisited `9d81fc6`) |
-| **08 Clubs** | Clubs (create/join/leave), Chat, Members (ownership succession), Rankings, **Invites + Moderation (`1d59aab`)** |
+| **08 Clubs** | Clubs (create/join/leave), Chat, Members (ownership succession), Rankings, **Invites + Moderation (`1d59aab`)**, Battles (scheduled head-to-head turf wars) |
 | **09 Rewards** | Achievements (12), Levels, Streaks (+ freeze), XP, **Coins (accrual + shop spending `298e886`)** |
 | **10 QA/Release** | Testing (236 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`) |
 
@@ -49,7 +49,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **05 Social** | Privacy (settings), Sharing (social share) | Medium |
 | **06 Challenges** | Events, Notifications, Push, Reminders | Mixed; needs custom dev-client |
 | **07 Territory** | Rules (caps/limits), Admin tools | Medium |
-| **08 Clubs** | Events, Battles (scheduled head-to-head) | Medium |
+| **08 Clubs** | Events (club-wide events beyond battles) | Medium |
 | **10 QA/Release** | Performance, Accessibility, Store (app-store release) | 20 High tasks concentrated here |
 | **02 Auth** | Settings (dedicated user/privacy settings) | Medium |
 
@@ -131,13 +131,14 @@ a usable planning artifact.
 | 05 Social | 6 / 8 | 96 | **~75%** 🟡 |
 | 06 Challenges | 3 / 7 | 84 | **~43%** 🔴 |
 | 07 Territory | 7 + ½ (Sync) / 10 | 120 | **~75%** 🟡 |
-| 08 Clubs | 6 / 8 | 96 | **~75%** 🟡 |
+| 08 Clubs | 7 / 8 | 96 | **~88%** 🟢 |
 | 09 Rewards | 5 + ½ (Badges) / 6 | 72 | **~92%** 🟢 |
 | 10 QA/Release | 4 + 1½ (½ Security, ½ Release, ½ Crash) / 10 | 120 | **~55%** 🟡 |
 
-**Overall (full 10-epic vision): ~70% complete** — feature-weighted. Recent work:
+**Overall (full 10-epic vision): ~71% complete** — feature-weighted. Recent work:
 crash-reporting + analytics (`3e3854f`) took Foundation to complete and QA/Release
-to ~55%; territory decay (`9d81fc6`) took Territory to ~75%.
+to ~55%; territory decay (`9d81fc6`) took Territory to ~75%; club battles took
+Clubs to ~88%.
 
 **Overall (MVP / prioritized roadmap): ~95%+ complete** — the assessment's header
 confirms the entire prioritized roadmap (auth → GPS run → territory capture →

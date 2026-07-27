@@ -30,8 +30,9 @@
 > | 13. Detox device tests (Android) — 8 specs, green on a real emulator | ✅ Done | `4c1be1d` |
 > | 14. Crash reporting (Sentry, API + web) + first-party analytics (all surfaces) | ✅ Done | `3e3854f` |
 > | 15. Territory decay — turf fades if not revisited (14-day cutoff) + freshness fade | ✅ Done | `9d81fc6` |
+> | 16. Club battles — scheduled head-to-head turf wars (propose/accept, live score, winner + coin reward) | ✅ Done | `ba1d536` |
 >
-> **Test count: 55 → 236** (40 shared + 82 API + 29 web + 77 mobile jest + 8
+> **Test count: 55 → 240** (40 shared + 86 API + 29 web + 77 mobile jest + 8
 > Detox device). Mobile CI: typecheck, expo-doctor, jest, dual-platform bundle,
 > plus a separate `mobile-e2e` job running Detox on an emulator against a live API.
 > All 9 mobile screens and the API client have unit coverage; the app is also
