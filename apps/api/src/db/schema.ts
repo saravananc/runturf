@@ -81,6 +81,8 @@ export const territoryCells = pgTable(
     primaryKey({ columns: [t.zoom, t.x, t.y] }),
     index('territory_owner_idx').on(t.ownerId),
     index('territory_xy_idx').on(t.x, t.y),
+    // Supports the decay sweep (delete cells older than the cutoff).
+    index('territory_captured_idx').on(t.capturedAt),
   ],
 );
 

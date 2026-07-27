@@ -1,3 +1,4 @@
+import { TERRITORY_DECAY_DAYS } from '@runturf/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
@@ -11,13 +12,23 @@ export interface CellFeature {
   coords: { latitude: number; longitude: number }[];
   color: string;
   mine: boolean;
+  /** 1 = just captured, → 0 near the decay cutoff. */
+  freshness: number;
 }
 
 interface TerritoryFC {
   features: {
-    properties: { x: number; y: number; color: string; ownerId: string };
+    properties: { x: number; y: number; color: string; ownerId: string; freshness?: number };
     geometry: { coordinates: number[][][] };
   }[];
+}
+
+/** Two-digit hex alpha, faded by freshness (floored so aging turf stays visible). */
+function fillAlpha(base: number, freshness: number): string {
+  const a = base * (0.4 + 0.6 * Math.max(0, Math.min(1, freshness)));
+  return Math.round(a * 255)
+    .toString(16)
+    .padStart(2, '0');
 }
 
 /** Fetches territory for a viewport and maps it to polygons. */
@@ -42,6 +53,7 @@ export function useTerritory(userId: string | undefined) {
             id: `${f.properties.x}:${f.properties.y}`,
             color: f.properties.color,
             mine: f.properties.ownerId === userId,
+            freshness: f.properties.freshness ?? 1,
             coords: f.geometry.coordinates[0].map(([lng, lat]) => ({
               latitude: lat,
               longitude: lng,
@@ -67,7 +79,7 @@ export function TerritoryPolygons({ cells }: { cells: CellFeature[] }) {
         <Polygon
           key={c.id}
           coordinates={c.coords}
-          fillColor={`${c.color}${c.mine ? '73' : '40'}`}
+          fillColor={`${c.color}${fillAlpha(c.mine ? 0.45 : 0.25, c.freshness)}`}
           strokeColor={c.color}
           strokeWidth={1}
         />
@@ -129,6 +141,7 @@ export function MapScreen() {
       <View style={s.banner} pointerEvents="none">
         <Text style={s.bannerTitle}>Territory map</Text>
         <Text style={s.bannerHint}>Run through a cell to claim it</Text>
+        <Text style={s.bannerNote}>Turf fades after {TERRITORY_DECAY_DAYS} days — run it to defend it</Text>
       </View>
     </View>
   );
@@ -151,4 +164,5 @@ const s = StyleSheet.create({
   },
   bannerTitle: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
   bannerHint: { fontFamily: font.regular, fontSize: type.caption, color: colors.ink2 },
+  bannerNote: { fontFamily: font.regular, fontSize: type.caption, color: colors.ink3 },
 });

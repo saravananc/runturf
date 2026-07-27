@@ -3,18 +3,58 @@ import {
   cellsOnPath,
   cellToPolygon,
   isoWeekStart,
+  TERRITORY_DECAY_DAYS,
   TERRITORY_ZOOM,
   type BBox,
   type LatLng,
   type LeaderboardEntry,
 } from '@runturf/shared';
-import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lt, lte, sql, sum } from 'drizzle-orm';
+import { config } from '../config.js';
 import { db, type Db } from '../db/client.js';
 import { cellCaptures, runs, territoryCells, users, userStats } from '../db/schema.js';
 import { badRequest } from '../errors.js';
 import { toPublic } from './auth.js';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+const DAY_MS = 86_400_000;
+
+/** Cells captured before this instant have decayed back to neutral. */
+export function decayCutoff(now: Date = new Date()): Date {
+  return new Date(now.getTime() - TERRITORY_DECAY_DAYS * DAY_MS);
+}
+
+/**
+ * Deletes decayed cells so they revert to neutral. Counts computed live from
+ * `territory_cells` (leaderboard, profile, clubs, achievements) then reflect the
+ * decay for free. Runs inside the run-submit transaction (so captures start from
+ * a clean board) and, throttled, on territory reads. Returns the number removed.
+ */
+export async function decayTerritory(
+  exec: Pick<Db, 'delete'> | Tx = db,
+  before: Date = decayCutoff(),
+): Promise<number> {
+  const deleted = await exec
+    .delete(territoryCells)
+    .where(lt(territoryCells.capturedAt, before))
+    .returning({ x: territoryCells.x });
+  return deleted.length;
+}
+
+// Reads run the sweep at most this often, so panning the map doesn't delete on
+// every request while quiet periods still eventually reclaim decayed turf.
+const SWEEP_THROTTLE_MS = 60_000;
+let lastSweep = 0;
+async function maybeSweep(): Promise<void> {
+  // Tests drive decay explicitly via decayTerritory(); a background sweep here
+  // would race with their assertions against the shared DB.
+  if (config.NODE_ENV === 'test') return;
+  const now = Date.now();
+  if (now - lastSweep < SWEEP_THROTTLE_MS) return;
+  lastSweep = now;
+  await decayTerritory();
+}
 
 export interface CaptureResult {
   newCells: number;
@@ -55,6 +95,7 @@ export async function captureCells(
     );
   const ownerByKey = new Map(existing.map((c) => [`${c.x}:${c.y}`, c.ownerId]));
 
+  const now = new Date();
   const result: CaptureResult = { newCells: 0, stolenCells: 0, retainedCells: 0 };
   const captures: (typeof cellCaptures.$inferInsert)[] = [];
 
@@ -62,7 +103,7 @@ export async function captureCells(
     const prevOwner = ownerByKey.get(`${cell.x}:${cell.y}`);
     if (prevOwner === userId) {
       result.retainedCells++;
-      continue;
+      continue; // ownership unchanged; the upsert below refreshes its freshness
     }
     if (prevOwner === undefined) result.newCells++;
     else result.stolenCells++;
@@ -76,25 +117,28 @@ export async function captureCells(
     });
   }
 
-  if (captures.length > 0) {
-    await tx
-      .insert(territoryCells)
-      .values(
-        captures.map((c) => ({
-          zoom: c.zoom,
-          x: c.x,
-          y: c.y,
-          ownerId: userId,
-          capturedAt: new Date(),
-          runId,
-        })),
-      )
-      .onConflictDoUpdate({
-        target: [territoryCells.zoom, territoryCells.x, territoryCells.y],
-        set: { ownerId: userId, capturedAt: new Date(), runId },
-      });
-    await tx.insert(cellCaptures).values(captures);
-  }
+  // Upsert *every* touched cell (cellsOnPath dedupes, so no key repeats). This
+  // claims new/stolen cells and — the point of decay — refreshes capturedAt on
+  // cells the runner already owned, so turf they keep running through never fades.
+  await tx
+    .insert(territoryCells)
+    .values(
+      cells.map((c) => ({
+        zoom: TERRITORY_ZOOM,
+        x: c.x,
+        y: c.y,
+        ownerId: userId,
+        capturedAt: now,
+        runId,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [territoryCells.zoom, territoryCells.x, territoryCells.y],
+      set: { ownerId: userId, capturedAt: now, runId },
+    });
+
+  // History records ownership changes only, not freshness refreshes.
+  if (captures.length > 0) await tx.insert(cellCaptures).values(captures);
   return result;
 }
 
@@ -118,6 +162,7 @@ export async function territoryInBBox(bbox: BBox): Promise<GeoJSONFC> {
   ) {
     throw badRequest('Invalid bbox');
   }
+  await maybeSweep(); // reclaim decayed turf so the map reflects it
   const probe = cellsInBBox(bbox, TERRITORY_ZOOM, MAX_VIEWPORT_CELLS + 1);
   if (probe.length > MAX_VIEWPORT_CELLS) {
     // Viewport zoomed out too far to render individual cells.
@@ -149,6 +194,8 @@ export async function territoryInBBox(bbox: BBox): Promise<GeoJSONFC> {
       ),
     );
 
+  const now = Date.now();
+  const decayMs = TERRITORY_DECAY_DAYS * DAY_MS;
   return {
     type: 'FeatureCollection',
     features: rows.map((r) => ({
@@ -160,6 +207,9 @@ export async function territoryInBBox(bbox: BBox): Promise<GeoJSONFC> {
         ownerName: r.ownerName,
         color: r.color,
         capturedAt: r.capturedAt.toISOString(),
+        // 1 = just captured, → 0 as the cell approaches the decay cutoff. Lets
+        // clients fade aging turf without re-deriving the decay window.
+        freshness: Math.max(0, Math.min(1, 1 - (now - r.capturedAt.getTime()) / decayMs)),
       },
       geometry: {
         type: 'Polygon' as const,
@@ -175,6 +225,7 @@ interface GeoJSONFC {
 }
 
 export async function territoryLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
+  await maybeSweep(); // so cell counts don't include decayed turf
   const owned = db
     .select({ ownerId: territoryCells.ownerId, cellsOwned: count().as('cells_owned') })
     .from(territoryCells)

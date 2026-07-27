@@ -11,7 +11,7 @@ import { runs } from '../db/schema.js';
 import { badRequest, conflict, notFound } from '../errors.js';
 import { applyRunRewards } from './gamification.js';
 import { getUserStats } from './stats.js';
-import { captureCells } from './territory.js';
+import { captureCells, decayTerritory } from './territory.js';
 
 const MAX_POINTS = 100_000;
 const MAX_PLAUSIBLE_AVG_SPEED_MS = 8; // ~2:05 min/km — faster than any human run
@@ -73,6 +73,9 @@ export async function submitRun(
       })
       .returning();
 
+    // Reclaim decayed turf first, so this run's captures start from a clean
+    // board (an expired cell is claimed as new, not "stolen" or "retained").
+    await decayTerritory(tx);
     const capture = await captureCells(tx, userId, inserted.id, input.points);
     const rewards = await applyRunRewards(
       tx,

@@ -20,11 +20,12 @@ export function useTerritoryOverlay() {
         source: 'territory',
         paint: {
           'fill-color': ['get', 'color'],
+          // Base opacity by ownership, faded by freshness so aging turf visibly
+          // dims toward the decay cutoff (floored at 40% so it stays legible).
           'fill-opacity': [
-            'case',
-            ['==', ['get', 'ownerId'], user?.id ?? ''],
-            0.45,
-            0.25,
+            '*',
+            ['case', ['==', ['get', 'ownerId'], user?.id ?? ''], 0.45, 0.25],
+            ['+', 0.4, ['*', 0.6, ['coalesce', ['get', 'freshness'], 1]]],
           ],
         },
       });

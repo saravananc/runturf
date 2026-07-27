@@ -118,6 +118,8 @@ export interface TerritoryCellFeatureProps {
   ownerName: string;
   color: string;
   capturedAt: string;
+  /** 1 = just captured, → 0 as the cell nears the decay cutoff. For fading turf. */
+  freshness: number;
 }
 
 export interface LeaderboardEntry {

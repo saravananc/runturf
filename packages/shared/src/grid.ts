@@ -5,6 +5,13 @@
 
 export const TERRITORY_ZOOM = 18;
 
+/**
+ * Territory decays: a captured cell you don't revisit within this many days
+ * reverts to neutral. Running through your own cell refreshes it, so active turf
+ * never fades — which is what makes "defend your turf" a real mechanic.
+ */
+export const TERRITORY_DECAY_DAYS = 14;
+
 export interface Cell {
   x: number;
   y: number;

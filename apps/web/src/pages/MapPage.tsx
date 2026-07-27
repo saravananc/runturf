@@ -1,3 +1,4 @@
+import { TERRITORY_DECAY_DAYS } from '@runturf/shared';
 import { MapView } from '../components/MapView';
 import { FlagIcon } from '../components/icons';
 import { useTerritoryOverlay } from '../territory/useTerritoryOverlay';
@@ -15,6 +16,9 @@ export function MapPage() {
         <div>
           <div className="text-[14px] font-bold text-ink">Territory map</div>
           <div className="text-[12px] text-ink-2">Run through a cell to claim it</div>
+          <div className="text-[11px] text-ink-3">
+            Turf fades after {TERRITORY_DECAY_DAYS} days — run it again to defend it
+          </div>
         </div>
       </div>
     </div>
