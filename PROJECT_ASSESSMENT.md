@@ -29,8 +29,9 @@
 > | 12. Mobile API-client tests (session, refresh rotation, revocation) | ✅ Done | `467e39b` |
 > | 13. Detox device tests (Android) — 8 specs, green on a real emulator | ✅ Done | `4c1be1d` |
 > | 14. Crash reporting (Sentry, API + web) + first-party analytics (all surfaces) | ✅ Done | `3e3854f` |
+> | 15. Territory decay — turf fades if not revisited (14-day cutoff) + freshness fade | ✅ Done | `9d81fc6` |
 >
-> **Test count: 55 → 232** (40 shared + 78 API + 29 web + 77 mobile jest + 8
+> **Test count: 55 → 236** (40 shared + 82 API + 29 web + 77 mobile jest + 8
 > Detox device). Mobile CI: typecheck, expo-doctor, jest, dual-platform bundle,
 > plus a separate `mobile-e2e` job running Detox on an emulator against a live API.
 > All 9 mobile screens and the API client have unit coverage; the app is also
@@ -50,6 +51,11 @@
 > event contract → `POST /events` → `analytics_events`) wired on all surfaces.
 > Only mobile *native* crash reporting (`@sentry/react-native`) is outstanding —
 > it needs a prebuild + rebuild + Detox re-verify.
+>
+> **Territory decay done (`15`, `9d81fc6`):** captured cells revert to neutral
+> 14 days after they were last run through; revisiting refreshes them, and the
+> maps fade aging turf by a `freshness` value. This closes the 07 conflict/decay
+> gap the body Module Status still lists as missing.
 >
 > **Known-but-unfixed minor items** (from the findings below):
 > - Risk #4 — tokens still in `localStorage`; **mitigated** (logout revocation,
