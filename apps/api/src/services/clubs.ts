@@ -3,6 +3,7 @@ import {
   type ClubBattle,
   type ClubBattleClub,
   type ClubDetail,
+  type ClubEvent,
   type ClubInvite,
   type ClubMessage,
   type ClubSummary,
@@ -12,6 +13,8 @@ import { db } from '../db/client.js';
 import {
   cellCaptures,
   clubBattles,
+  clubEventRsvps,
+  clubEvents,
   clubInvites,
   clubMembers,
   clubMessages,
@@ -519,4 +522,116 @@ export async function listClubBattles(clubId: string): Promise<ClubBattle[]> {
     limit: 50,
   });
   return Promise.all(rows.map(toBattle));
+}
+
+/* ---------- club events (scheduled meet-ups) ---------- */
+
+/** Throws unless `userId` belongs to `clubId`; returns their membership. */
+async function requireMember(userId: string, clubId: string) {
+  const membership = await db.query.clubMembers.findFirst({
+    where: and(eq(clubMembers.clubId, clubId), eq(clubMembers.userId, userId)),
+  });
+  if (!membership) throw forbidden('Members only');
+  return membership;
+}
+
+/** Events for a club, soonest first, with RSVP counts and the viewer's answer. */
+export async function listClubEvents(userId: string, clubId: string): Promise<ClubEvent[]> {
+  await requireMember(userId, clubId);
+  const rows = await db
+    .select({ e: clubEvents, creator: users })
+    .from(clubEvents)
+    .innerJoin(users, eq(users.id, clubEvents.createdBy))
+    .where(eq(clubEvents.clubId, clubId))
+    .orderBy(asc(clubEvents.startsAt))
+    .limit(50);
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.e.id);
+  const [counts, mine] = await Promise.all([
+    db
+      .select({ eventId: clubEventRsvps.eventId, n: count() })
+      .from(clubEventRsvps)
+      .where(and(inArray(clubEventRsvps.eventId, ids), eq(clubEventRsvps.going, true)))
+      .groupBy(clubEventRsvps.eventId),
+    db.query.clubEventRsvps.findMany({
+      where: and(inArray(clubEventRsvps.eventId, ids), eq(clubEventRsvps.userId, userId)),
+    }),
+  ]);
+  const goingById = new Map(counts.map((c) => [c.eventId, Number(c.n)]));
+  const mineById = new Map(mine.map((r) => [r.eventId, r.going]));
+
+  return rows.map((r) => ({
+    id: r.e.id,
+    clubId: r.e.clubId,
+    title: r.e.title,
+    description: r.e.description,
+    location: r.e.location,
+    startsAt: r.e.startsAt.toISOString(),
+    cancelled: r.e.cancelledAt !== null,
+    createdBy: toPublic(r.creator),
+    goingCount: goingById.get(r.e.id) ?? 0,
+    myRsvp: mineById.get(r.e.id) ?? null,
+    createdAt: r.e.createdAt.toISOString(),
+  }));
+}
+
+/** Owner schedules a meet-up. */
+export async function createClubEvent(
+  userId: string,
+  clubId: string,
+  input: { title: string; description?: string; location?: string; startsAt: string },
+): Promise<ClubEvent> {
+  await requireOwner(userId, clubId);
+  const title = input.title.trim();
+  if (title.length < 3 || title.length > 80) throw badRequest('Title must be 3-80 characters');
+  const startsAt = new Date(input.startsAt);
+  if (Number.isNaN(startsAt.getTime())) throw badRequest('Invalid start time');
+  if (startsAt.getTime() < Date.now()) throw badRequest('Event must start in the future');
+
+  const [row] = await db
+    .insert(clubEvents)
+    .values({
+      clubId,
+      title,
+      description: input.description?.trim() ?? '',
+      location: input.location?.trim() ?? '',
+      startsAt,
+      createdBy: userId,
+    })
+    .returning();
+
+  const events = await listClubEvents(userId, clubId);
+  return events.find((e) => e.id === row.id)!;
+}
+
+/** Owner cancels an event. Kept (not deleted) so members see it was called off. */
+export async function cancelClubEvent(userId: string, eventId: string): Promise<void> {
+  const event = await db.query.clubEvents.findFirst({ where: eq(clubEvents.id, eventId) });
+  if (!event) throw notFound('Event not found');
+  await requireOwner(userId, event.clubId);
+  if (event.cancelledAt) throw conflict('Event is already cancelled');
+  await db
+    .update(clubEvents)
+    .set({ cancelledAt: new Date() })
+    .where(eq(clubEvents.id, eventId));
+}
+
+/** A member says whether they're coming. Upserts, so answers can change. */
+export async function rsvpClubEvent(
+  userId: string,
+  eventId: string,
+  going: boolean,
+): Promise<void> {
+  const event = await db.query.clubEvents.findFirst({ where: eq(clubEvents.id, eventId) });
+  if (!event) throw notFound('Event not found');
+  await requireMember(userId, event.clubId);
+  if (event.cancelledAt) throw badRequest('Event was cancelled');
+  await db
+    .insert(clubEventRsvps)
+    .values({ eventId, userId, going })
+    .onConflictDoUpdate({
+      target: [clubEventRsvps.eventId, clubEventRsvps.userId],
+      set: { going, respondedAt: new Date() },
+    });
 }

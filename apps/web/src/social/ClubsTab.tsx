@@ -2,6 +2,7 @@ import type {
   ClubBattle,
   ClubBattleClub,
   ClubDetail,
+  ClubEvent,
   ClubInvite,
   ClubMessage,
   ClubSummary,
@@ -118,6 +119,8 @@ function MyClub({ club }: { club: ClubDetail }) {
       )}
 
       <ClubBattles club={club} isOwner={isOwner} />
+
+      <ClubEvents clubId={club.id} isOwner={isOwner} />
 
       <ClubChat clubId={club.id} />
 
@@ -609,6 +612,195 @@ function ClubBattles({ club, isOwner }: { club: ClubDetail; isOwner: boolean }) 
         </p>
       )}
     </section>
+  );
+}
+
+/* ---------- events ---------- */
+
+function formatEventTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function ClubEvents({ clubId, isOwner }: { clubId: string; isOwner: boolean }) {
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const { data: events } = useQuery({
+    queryKey: ['clubEvents', clubId],
+    queryFn: () => get<ClubEvent[]>(`/clubs/${clubId}/events`),
+  });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['clubEvents', clubId] });
+
+  const rsvp = useMutation({
+    mutationFn: ({ id, going }: { id: string; going: boolean }) =>
+      post(`/clubs/events/${id}/rsvp`, { going }),
+    onSuccess: refresh,
+  });
+  const cancel = useMutation({
+    mutationFn: (id: string) => del(`/clubs/events/${id}`),
+    onSuccess: refresh,
+  });
+
+  return (
+    <section className="mt-6">
+      <SectionHeading
+        action={
+          isOwner ? (
+            <button
+              onClick={() => setAdding((v) => !v)}
+              className="text-[12px] font-semibold text-volt"
+            >
+              {adding ? 'Cancel' : '+ Schedule'}
+            </button>
+          ) : undefined
+        }
+      >
+        Events
+      </SectionHeading>
+
+      {adding && (
+        <NewEventForm
+          clubId={clubId}
+          onCreated={() => {
+            setAdding(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {events?.length === 0 && !adding && (
+        <p className="text-[13px] text-ink-3">
+          {isOwner ? 'No events yet — schedule a group run.' : 'No events scheduled yet.'}
+        </p>
+      )}
+
+      <div className="space-y-2.5">
+        {events?.map((e) => (
+          <div key={e.id} className={`card p-3.5 ${e.cancelled ? 'opacity-60' : ''}`}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[14px] font-bold text-ink">
+                {e.title}
+                {e.cancelled && <span className="ml-2 text-[11px] text-ember">Cancelled</span>}
+              </span>
+              <span className="shrink-0 text-[12px] font-semibold text-volt">
+                {e.goingCount} going
+              </span>
+            </div>
+            <div className="mt-0.5 text-[12px] text-ink-2">
+              {formatEventTime(e.startsAt)}
+              {e.location && ` · ${e.location}`}
+            </div>
+            {e.description && <p className="mt-1.5 text-[13px] text-ink-2">{e.description}</p>}
+
+            {!e.cancelled && (
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  onClick={() => rsvp.mutate({ id: e.id, going: true })}
+                  disabled={rsvp.isPending}
+                  className={`btn flex-1 py-1.5 text-[12px] ${
+                    e.myRsvp === true ? 'btn-primary' : 'btn-ghost'
+                  }`}
+                >
+                  Going
+                </button>
+                <button
+                  onClick={() => rsvp.mutate({ id: e.id, going: false })}
+                  disabled={rsvp.isPending}
+                  className={`btn flex-1 py-1.5 text-[12px] ${
+                    e.myRsvp === false ? 'btn-primary' : 'btn-ghost'
+                  }`}
+                >
+                  Can't make it
+                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => cancel.mutate(e.id)}
+                    disabled={cancel.isPending}
+                    className="btn btn-ghost px-3 py-1.5 text-[12px] text-ember"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NewEventForm({ clubId, onCreated }: { clubId: string; onCreated: () => void }) {
+  const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [startsAt, setStartsAt] = useState('');
+  const [error, setError] = useState('');
+
+  const create = useMutation({
+    // datetime-local has no timezone; the Date round-trip attaches the local one.
+    mutationFn: () =>
+      post(`/clubs/${clubId}/events`, {
+        title,
+        location: location || undefined,
+        description: description || undefined,
+        startsAt: new Date(startsAt).toISOString(),
+      }),
+    onSuccess: onCreated,
+    onError: (e) => setError(e instanceof Error ? e.message : 'Could not schedule that'),
+  });
+
+  return (
+    <form
+      onSubmit={(ev: FormEvent) => {
+        ev.preventDefault();
+        setError('');
+        create.mutate();
+      }}
+      className="card mb-2.5 space-y-2.5 p-4"
+    >
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title (e.g. Saturday long run)"
+        className="input w-full"
+        maxLength={80}
+      />
+      <input
+        type="datetime-local"
+        value={startsAt}
+        onChange={(e) => setStartsAt(e.target.value)}
+        className="input w-full"
+      />
+      <input
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder="Where to meet (optional)"
+        className="input w-full"
+        maxLength={120}
+      />
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Details (optional)"
+        className="input w-full"
+        rows={2}
+        maxLength={500}
+      />
+      {error && <p className="text-[12px] font-semibold text-ember">{error}</p>}
+      <button
+        type="submit"
+        disabled={create.isPending || title.trim().length < 3 || !startsAt}
+        className="btn btn-primary w-full py-2 text-[13px]"
+      >
+        {create.isPending ? 'Scheduling…' : 'Schedule event'}
+      </button>
+    </form>
   );
 }
 

@@ -2,6 +2,7 @@ import type {
   ClubBattle,
   ClubBattleClub,
   ClubDetail,
+  ClubEvent,
   ClubInvite,
   ClubMessage,
   ClubSummary,
@@ -479,6 +480,8 @@ function MyClub({ club, onChanged }: { club: ClubDetail; onChanged: () => void }
 
       <ClubBattles club={club} isOwner={isOwner} />
 
+      <ClubEvents clubId={club.id} isOwner={isOwner} />
+
       <Card style={{ marginTop: space(3), padding: 0, overflow: 'hidden' }}>
         <Text style={s.chatHeader}>Club chat</Text>
         <FlatList
@@ -727,6 +730,124 @@ function ClubStat({ label, value, volt }: { label: string; value: string; volt?:
   );
 }
 
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} · ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+}
+
+/**
+ * Club meet-ups. Members RSVP and owners can cancel here; scheduling a new event
+ * is web-only for now — a date/time picker needs a native module we don't carry.
+ */
+function ClubEvents({ clubId, isOwner }: { clubId: string; isOwner: boolean }) {
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setEvents(await get<ClubEvent[]>(`/clubs/${clubId}/events`));
+    } catch {
+      /* keep what we have */
+    }
+  }, [clubId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  async function rsvp(id: string, going: boolean) {
+    setBusy(true);
+    try {
+      await post(`/clubs/events/${id}/rsvp`, { going });
+      await load();
+    } catch (e) {
+      Alert.alert('Could not RSVP', e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmCancel(event: ClubEvent) {
+    Alert.alert('Cancel event?', event.title, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Cancel event',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await del(`/clubs/events/${event.id}`);
+            await load();
+          } catch (e) {
+            Alert.alert('Failed', e instanceof Error ? e.message : 'Network error');
+          }
+        },
+      },
+    ]);
+  }
+
+  return (
+    <View style={{ marginTop: space(5) }}>
+      <SectionHeading>Events</SectionHeading>
+      {events.length === 0 ? (
+        <Text style={s.eventEmpty}>
+          {isOwner ? 'No events yet — schedule one on the web app.' : 'No events scheduled yet.'}
+        </Text>
+      ) : (
+        events.map((e) => (
+          <Card key={e.id} style={[s.eventCard, e.cancelled && { opacity: 0.6 }]}>
+            <View style={s.eventTop}>
+              <Text style={s.eventTitle} numberOfLines={1}>
+                {e.title}
+              </Text>
+              <Text style={s.eventGoing}>{e.goingCount} going</Text>
+            </View>
+            <Text style={s.eventMeta}>
+              {formatEventTime(e.startsAt)}
+              {e.location ? ` · ${e.location}` : ''}
+              {e.cancelled ? ' · Cancelled' : ''}
+            </Text>
+            {e.description ? <Text style={s.eventDesc}>{e.description}</Text> : null}
+            {!e.cancelled && (
+              <View style={s.eventActions}>
+                <Btn
+                  label="Going"
+                  size="sm"
+                  variant={e.myRsvp === true ? 'primary' : 'ghost'}
+                  disabled={busy}
+                  onPress={() => rsvp(e.id, true)}
+                  style={{ flex: 1 }}
+                />
+                <Btn
+                  label="Can't"
+                  size="sm"
+                  variant={e.myRsvp === false ? 'primary' : 'ghost'}
+                  disabled={busy}
+                  onPress={() => rsvp(e.id, false)}
+                  style={{ flex: 1 }}
+                />
+                {isOwner && (
+                  <Btn
+                    label="Cancel"
+                    size="sm"
+                    variant="dangerSoft"
+                    onPress={() => confirmCancel(e)}
+                  />
+                )}
+              </View>
+            )}
+          </Card>
+        ))
+      )}
+    </View>
+  );
+}
+
 function battleTimeLeft(endsAt: string): string {
   const ms = new Date(endsAt).getTime() - Date.now();
   if (ms <= 0) return 'ending…';
@@ -945,6 +1066,19 @@ const s = StyleSheet.create({
     marginTop: space(2),
   },
   battleRow: { flexDirection: 'row', alignItems: 'center' },
+  eventCard: { marginTop: space(2.5), padding: space(3.5) },
+  eventTop: { flexDirection: 'row', alignItems: 'baseline', gap: space(2) },
+  eventTitle: { flex: 1, fontFamily: font.bold, fontSize: type.small, color: colors.ink },
+  eventGoing: { fontFamily: font.semibold, fontSize: type.caption, color: colors.volt },
+  eventMeta: { marginTop: 2, fontFamily: font.regular, fontSize: type.caption, color: colors.ink2 },
+  eventDesc: {
+    marginTop: space(1.5),
+    fontFamily: font.regular,
+    fontSize: type.caption,
+    color: colors.ink2,
+  },
+  eventActions: { flexDirection: 'row', gap: space(2), marginTop: space(2.5) },
+  eventEmpty: { fontFamily: font.regular, fontSize: type.caption, color: colors.ink3 },
   battleSide: { flex: 1, alignItems: 'center', gap: space(1) },
   battleBadge: { width: 30, height: 30, borderRadius: radius.ctl, alignItems: 'center', justifyContent: 'center' },
   battleBadgeTag: { fontFamily: font.extrabold, fontSize: 11, color: colors.base },

@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { h, idParam, parseBody, requireAuth } from '../middleware.js';
 import {
+  cancelClubEvent,
   createClub,
+  createClubEvent,
   getClub,
   getMyClub,
   inviteToClub,
@@ -10,6 +12,7 @@ import {
   kickMember,
   leaveClub,
   listClubBattles,
+  listClubEvents,
   listClubs,
   listMessages,
   listMyInvites,
@@ -17,6 +20,7 @@ import {
   proposeBattle,
   respondToBattle,
   respondToInvite,
+  rsvpClubEvent,
   transferOwnership,
 } from '../services/clubs.js';
 
@@ -114,6 +118,46 @@ clubsRouter.get(
   '/:id/battles',
   h(async (req, res) => {
     res.json(await listClubBattles(idParam(req.params.id)));
+  }),
+);
+
+clubsRouter.get(
+  '/:id/events',
+  h(async (req, res) => {
+    res.json(await listClubEvents(req.userId, idParam(req.params.id)));
+  }),
+);
+
+clubsRouter.post(
+  '/:id/events',
+  h(async (req, res) => {
+    const input = parseBody(
+      z.object({
+        title: z.string().min(3).max(80),
+        description: z.string().max(500).optional(),
+        location: z.string().max(120).optional(),
+        startsAt: z.string().datetime(),
+      }),
+      req.body,
+    );
+    res.status(201).json(await createClubEvent(req.userId, idParam(req.params.id), input));
+  }),
+);
+
+clubsRouter.post(
+  '/events/:eventId/rsvp',
+  h(async (req, res) => {
+    const { going } = parseBody(z.object({ going: z.boolean() }), req.body);
+    await rsvpClubEvent(req.userId, idParam(req.params.eventId), going);
+    res.json({ ok: true });
+  }),
+);
+
+clubsRouter.delete(
+  '/events/:eventId',
+  h(async (req, res) => {
+    await cancelClubEvent(req.userId, idParam(req.params.eventId));
+    res.status(204).end();
   }),
 );
 

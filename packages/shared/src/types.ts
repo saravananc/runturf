@@ -237,6 +237,22 @@ export interface ClubBattle {
   createdAt: string;
 }
 
+export interface ClubEvent {
+  id: string;
+  clubId: string;
+  title: string;
+  description: string;
+  location: string;
+  startsAt: string;
+  cancelled: boolean;
+  createdBy: UserPublic;
+  /** Members who answered "going". */
+  goingCount: number;
+  /** The signed-in member's answer: true/false, or null if they haven't replied. */
+  myRsvp: boolean | null;
+  createdAt: string;
+}
+
 export interface ChallengeStanding {
   user: UserPublic;
   progress: number;

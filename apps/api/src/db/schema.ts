@@ -329,3 +329,40 @@ export const clubBattles = pgTable(
     index('battles_status_idx').on(t.status),
   ],
 );
+
+/** A scheduled club meet-up (group run, race, social). Owner-managed. */
+export const clubEvents = pgTable(
+  'club_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clubId: uuid('club_id')
+      .notNull()
+      .references(() => clubs.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    location: text('location').notNull().default(''),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('club_events_club_starts_idx').on(t.clubId, t.startsAt)],
+);
+
+/** A member's answer to an event. Absence of a row means "no answer yet". */
+export const clubEventRsvps = pgTable(
+  'club_event_rsvps',
+  {
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => clubEvents.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    going: boolean('going').notNull().default(true),
+    respondedAt: timestamp('responded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.userId] })],
+);
