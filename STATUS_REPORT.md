@@ -28,15 +28,15 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **01 Foundation** | Architecture, Project Setup, Config (zod env), Env, Logging (pino + `pino-http` wired `5687af1`), CI/CD, Docker (API Dockerfile + compose `0979d83`), Monitoring (Sentry crash reporting + first-party analytics `3e3854f`) |
 | **02 Auth** | Register, Login, JWT (access 15 m + refresh 30 d rotation **+ logout revocation** `35f726e`), Profile (PATCH + edit UI `5687af1`), Roles (club-level `requireOwner` + site-admin `requireAdmin`) |
 | **03 GPS/Maps** | GPS (watchPosition + mobile), Map rendering (MapLibre/OSM), Permissions, Foreground Tracking |
-| **04 Runs** | Run CRUD, PB detection, History (+7-day chart), Export (GPX), **Import (GPX `121f903`)**, Stats |
+| **04 Runs** | Run CRUD, PB detection, History (+7-day chart), Export (GPX), **Import (GPX `121f903`)**, Stats, Filters + Search (date range, distance, sort) |
 | **05 Social** | Friends, Requests, Feed, Search, Leaderboard, Profiles, Privacy (feed/discovery settings), Sharing (run share) |
 | **06 Challenges** | Challenges (join/progress/complete), Rewards, **Scheduler (weekly lifecycle `600dbd3`)** |
 | **07 Territory** | Capture engine, Grid (slippy-tile z18), Ownership (new/steal/retain), History (`cell_captures`), Rendering (viewport GeoJSON), Scoring (turf leaderboard), Conflict (decay — turf fades if not revisited `9d81fc6`), Rules (steal protection on fresh turf), Admin (overview, force decay, clear territory) |
 | **08 Clubs** | Clubs (create/join/leave), Chat, Members (ownership succession), Rankings, **Invites + Moderation (`1d59aab`)**, Battles (scheduled head-to-head turf wars) |
 | **09 Rewards** | Achievements (12), Levels, Streaks (+ freeze), XP, **Coins (accrual + shop spending `298e886`)** |
-| **10 QA/Release** | Testing (247 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`) |
+| **10 QA/Release** | Testing (253 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`) |
 
-**~62 of 81 features fully done.**
+**~64 of 81 features fully done.**
 
 ---
 
@@ -45,12 +45,11 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | Epic | Pending features | Priority signal |
 |---|---|---|
 | **03 GPS/Maps** | Background tracking, Battery optimization, Geofence, Offline maps, Routes (saved/reusable) | High-weight epic (20 High tasks) |
-| **04 Runs** | Filters, Search (history filter/search UI) | Medium |
 | **06 Challenges** | Events, Notifications, Push, Reminders | Mixed; needs custom dev-client |
 | **08 Clubs** | Events (club-wide events beyond battles) | Medium |
 | **10 QA/Release** | Performance, Accessibility, Store (app-store release) | 20 High tasks concentrated here |
 
-**~15 features unstarted**, concentrated in **03 (GPS depth), 06 (push/events), 10 (release breadth)**.
+**~13 features unstarted**, concentrated in **03 (GPS depth), 06 (push/events), 10 (release breadth)**.
 
 ---
 
@@ -81,8 +80,8 @@ Features the assessment confirms as fully implemented (commit noted where given)
   interceptor** — not itemized.
 
 **Backlog features with no implementation yet:** all Pending items in §2
-(Background, Battery, Geofence, Offline, Routes, Filters, Search, Events,
-Notifications, Push, Reminders, Performance, Accessibility, Store).
+(Background, Battery, Geofence, Offline, Routes, Events, Notifications, Push,
+Reminders, Performance, Accessibility, Store).
 
 **Deviation:** backlog specifies **Mapbox** (03); implementation uses
 **MapLibre/OSM** — functionally equivalent, different technology than planned.
@@ -123,7 +122,7 @@ a usable planning artifact.
 | 01 Foundation | 8 / 8 | 96 | **~100%** 🟢 |
 | 02 Auth | 5 + ½ (Settings) / 6 | 72 | **~92%** 🟢 |
 | 03 GPS/Maps | 4 + ½ (Sync) / 10 | 120 | **~45%** 🔴 |
-| 04 Runs | 6 / 8 | 96 | **~75%** 🟡 |
+| 04 Runs | 8 / 8 | 96 | **~100%** 🟢 |
 | 05 Social | 8 / 8 | 96 | **~100%** 🟢 |
 | 06 Challenges | 3 / 7 | 84 | **~43%** 🔴 |
 | 07 Territory | 9 + ½ (Sync) / 10 | 120 | **~95%** 🟢 |
@@ -131,18 +130,19 @@ a usable planning artifact.
 | 09 Rewards | 5 + ½ (Badges) / 6 | 72 | **~92%** 🟢 |
 | 10 QA/Release | 4 + 1½ (½ Security, ½ Release, ½ Crash) / 10 | 120 | **~55%** 🟡 |
 
-**Overall (full 10-epic vision): ~78% complete** — feature-weighted. Recent work:
+**Overall (full 10-epic vision): ~81% complete** — feature-weighted. Recent work:
 crash-reporting + analytics (`3e3854f`) took Foundation to complete and QA/Release
 to ~55%; territory decay (`9d81fc6`) and then steal-protection + admin tools took
 Territory to ~95%; club battles took Clubs to ~88%; social sharing + privacy took
-Social to complete; site-admin role enforcement took Auth to ~92%.
+Social to complete; site-admin role enforcement took Auth to ~92%; run
+filters/search took Runs to complete.
 
 **Overall (MVP / prioritized roadmap): ~95%+ complete** — the assessment's header
 confirms the entire prioritized roadmap (auth → GPS run → territory capture →
 rewards → social → clubs → shop → deployment → tests → device E2E) is done. The
 core game loop works end-to-end on web and is verified on-device.
 
-**Where the remaining ~22% lives:** almost entirely in **deferred breadth** —
+**Where the remaining ~19% lives:** almost entirely in **deferred breadth** —
 mobile-platform features needing a custom dev-client (push, background GPS: epics
 03/06), GPS depth (offline, geofence, routes), and release-readiness (store, a11y,
 perf: epic 10). None block the current product; all are net-new.
