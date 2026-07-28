@@ -34,8 +34,9 @@
 > | 17. Social sharing (run share) + privacy settings (feed/discovery), enforced in feed & search | ✅ Done | `832eed7` |
 > | 18. Territory rules (steal protection on fresh turf) + admin tools; site-admin role now enforced | ✅ Done | `1269017` |
 > | 19. Run history filters + sorting (date range, distance, sort key/order) on web + mobile | ✅ Done | `26a99b4` |
+> | 20. Club events — scheduled meet-ups with RSVP, owner create/cancel (completes epic 08) | ✅ Done | `64d9af9` |
 >
-> **Test count: 55 → 253** (40 shared + 99 API + 29 web + 77 mobile jest + 8
+> **Test count: 55 → 260** (40 shared + 106 API + 29 web + 77 mobile jest + 8
 > Detox device). Mobile CI: typecheck, expo-doctor, jest, dual-platform bundle,
 > plus a separate `mobile-e2e` job running Detox on an emulator against a live API.
 > All 9 mobile screens and the API client have unit coverage; the app is also
