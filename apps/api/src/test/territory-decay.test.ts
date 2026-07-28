@@ -59,15 +59,18 @@ describe('territory decay', () => {
     expect((await request(app).post('/runs').set(auth(u.token)).send(lane(0))).status).toBe(201);
     expect(await cellCount(u.id)).toBeGreaterThan(0);
 
-    // Just inside the window: survives.
+    // Just inside the window: survives a sweep.
     await ageCells(u.id, TERRITORY_DECAY_DAYS - 1);
-    expect(await decayTerritory()).toBe(0);
+    await decayTerritory();
     const fresh = await cellCount(u.id);
     expect(fresh).toBeGreaterThan(0);
 
-    // Past the window: swept back to neutral.
+    // Past the window: swept back to neutral. Assert on this user's own cells —
+    // decayTerritory() is global, so its return count also covers rows created
+    // by other suites running in parallel.
     await ageCells(u.id, TERRITORY_DECAY_DAYS + 1);
-    expect(await decayTerritory()).toBe(fresh);
+    const removed = await decayTerritory();
+    expect(removed).toBeGreaterThanOrEqual(fresh);
     expect(await cellCount(u.id)).toBe(0);
   });
 

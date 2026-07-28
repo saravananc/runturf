@@ -38,10 +38,32 @@ runsRouter.post(
   }),
 );
 
+const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
+
+const RunQuerySchema = z
+  .object({
+    from: IsoDate.optional(),
+    to: IsoDate.optional(),
+    minDistanceM: z.coerce.number().nonnegative().optional(),
+    maxDistanceM: z.coerce.number().nonnegative().optional(),
+    sort: z.enum(['date', 'distance', 'duration', 'pace']).optional(),
+    order: z.enum(['asc', 'desc']).optional(),
+  })
+  .refine((q) => !(q.from && q.to) || q.from <= q.to, {
+    message: 'from must be on or before to',
+  })
+  .refine(
+    (q) =>
+      q.minDistanceM === undefined ||
+      q.maxDistanceM === undefined ||
+      q.minDistanceM <= q.maxDistanceM,
+    { message: 'minDistanceM must be <= maxDistanceM' },
+  );
+
 runsRouter.get(
   '/',
   h(async (req, res) => {
-    res.json(await listRuns(req.userId));
+    res.json(await listRuns(req.userId, parseBody(RunQuerySchema, req.query)));
   }),
 );
 

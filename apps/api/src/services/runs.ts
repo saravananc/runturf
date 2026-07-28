@@ -2,10 +2,11 @@ import {
   parseGpx,
   pathDistanceM,
   type RunPointInput,
+  type RunQuery,
   type RunReport,
   type RunSummary,
 } from '@runturf/shared';
-import { and, count, desc, eq, max, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lt, lte, max, sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { runs } from '../db/schema.js';
 import { badRequest, conflict, notFound } from '../errors.js';
@@ -169,10 +170,38 @@ async function detectPersonalBests(
   return bests;
 }
 
-export async function listRuns(userId: string, limit = 50): Promise<RunSummary[]> {
+/** Column each sort key maps to. `pace` is null for zero-distance runs, which
+ * Postgres sorts last on DESC and first on ASC — acceptable for a history list. */
+const SORT_COLUMN = {
+  date: runs.startedAt,
+  distance: runs.distanceM,
+  duration: runs.durationS,
+  pace: runs.avgPaceSPerKm,
+} as const;
+
+export async function listRuns(
+  userId: string,
+  query: RunQuery = {},
+  limit = 50,
+): Promise<RunSummary[]> {
+  const filters = [eq(runs.userId, userId)];
+  // Dates arrive as YYYY-MM-DD; `to` covers the whole day, so compare against
+  // the following midnight rather than 00:00 of the same date.
+  if (query.from) filters.push(gte(runs.startedAt, new Date(`${query.from}T00:00:00.000Z`)));
+  if (query.to) {
+    const end = new Date(`${query.to}T00:00:00.000Z`);
+    end.setUTCDate(end.getUTCDate() + 1);
+    filters.push(lt(runs.startedAt, end));
+  }
+  if (query.minDistanceM !== undefined) filters.push(gte(runs.distanceM, query.minDistanceM));
+  if (query.maxDistanceM !== undefined) filters.push(lte(runs.distanceM, query.maxDistanceM));
+
+  const column = SORT_COLUMN[query.sort ?? 'date'];
+  const direction = query.order ?? 'desc';
+
   const rows = await db.query.runs.findMany({
-    where: eq(runs.userId, userId),
-    orderBy: [desc(runs.startedAt)],
+    where: and(...filters),
+    orderBy: [direction === 'asc' ? asc(column) : desc(column)],
     limit,
   });
   return rows.map(toRunSummary);

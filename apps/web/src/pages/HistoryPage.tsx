@@ -1,4 +1,4 @@
-import type { RunReport, RunSummary, UserStats } from '@runturf/shared';
+import type { RunQuery, RunSort, RunReport, RunSummary, UserStats } from '@runturf/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { del, get, post } from '../api/client';
@@ -16,9 +16,29 @@ import { EmptyState, StatTile } from '../components/ui';
 import { WeeklyChart } from '../components/WeeklyChart';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
 
+/** Serialises a filter into a query string, dropping empty fields. */
+function toQueryString(q: RunQuery): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) {
+    if (v !== undefined && v !== '') params.set(k, String(v));
+  }
+  const s = params.toString();
+  return s ? `?${s}` : '';
+}
+
+const EMPTY_FILTER: RunQuery = { sort: 'date', order: 'desc' };
+
 export function HistoryPage() {
   const qc = useQueryClient();
-  const runs = useQuery({ queryKey: ['runs'], queryFn: () => get<RunSummary[]>('/runs') });
+  const [filter, setFilter] = useState<RunQuery>(EMPTY_FILTER);
+  const [showFilters, setShowFilters] = useState(false);
+  // The filter is part of the key, so changing it refetches (and caches per filter).
+  const runs = useQuery({
+    queryKey: ['runs', filter],
+    queryFn: () => get<RunSummary[]>(`/runs${toQueryString(filter)}`),
+  });
+  const isFiltered =
+    !!filter.from || !!filter.to || filter.minDistanceM !== undefined || filter.maxDistanceM !== undefined;
   const stats = useQuery({
     queryKey: ['stats'],
     queryFn: () => get<UserStats>('/users/me/stats'),
@@ -101,20 +121,119 @@ export function HistoryPage() {
         </div>
       )}
 
-      {runs.data && runs.data.length > 0 && (
+      {runs.data && runs.data.length > 0 && !isFiltered && (
         <div className="mt-3">
           <WeeklyChart runs={runs.data} />
         </div>
       )}
 
-      <div className="mt-5 space-y-2.5">
-        {runs.data?.length === 0 && (
-          <EmptyState
-            icon={<HistoryIcon size={32} />}
-            title="No runs yet"
-            hint="Head to the Record tab and claim your first turf."
-          />
+      <div className="mt-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            aria-expanded={showFilters}
+            className="btn btn-ghost px-3.5 py-2 text-[13px]"
+          >
+            Filters{isFiltered ? ' •' : ''}
+          </button>
+          <select
+            aria-label="Sort runs"
+            value={`${filter.sort ?? 'date'}:${filter.order ?? 'desc'}`}
+            onChange={(e) => {
+              const [sort, order] = e.target.value.split(':') as [RunSort, 'asc' | 'desc'];
+              setFilter((f) => ({ ...f, sort, order }));
+            }}
+            className="input ml-auto w-auto py-2 text-[13px]"
+          >
+            <option value="date:desc">Newest first</option>
+            <option value="date:asc">Oldest first</option>
+            <option value="distance:desc">Longest</option>
+            <option value="distance:asc">Shortest</option>
+            <option value="duration:desc">Slowest (time)</option>
+            <option value="pace:asc">Fastest pace</option>
+          </select>
+        </div>
+
+        {showFilters && (
+          <div className="card anim-rise mt-2.5 space-y-3 p-4">
+            <div className="grid grid-cols-2 gap-2.5">
+              <label className="block">
+                <span className="t-label">From</span>
+                <input
+                  type="date"
+                  value={filter.from ?? ''}
+                  onChange={(e) => setFilter((f) => ({ ...f, from: e.target.value || undefined }))}
+                  className="input mt-1 w-full"
+                />
+              </label>
+              <label className="block">
+                <span className="t-label">To</span>
+                <input
+                  type="date"
+                  value={filter.to ?? ''}
+                  onChange={(e) => setFilter((f) => ({ ...f, to: e.target.value || undefined }))}
+                  className="input mt-1 w-full"
+                />
+              </label>
+              <label className="block">
+                <span className="t-label">Min km</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={filter.minDistanceM !== undefined ? filter.minDistanceM / 1000 : ''}
+                  onChange={(e) =>
+                    setFilter((f) => ({
+                      ...f,
+                      minDistanceM: e.target.value ? Number(e.target.value) * 1000 : undefined,
+                    }))
+                  }
+                  className="input mt-1 w-full"
+                />
+              </label>
+              <label className="block">
+                <span className="t-label">Max km</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={filter.maxDistanceM !== undefined ? filter.maxDistanceM / 1000 : ''}
+                  onChange={(e) =>
+                    setFilter((f) => ({
+                      ...f,
+                      maxDistanceM: e.target.value ? Number(e.target.value) * 1000 : undefined,
+                    }))
+                  }
+                  className="input mt-1 w-full"
+                />
+              </label>
+            </div>
+            <button
+              onClick={() => setFilter(EMPTY_FILTER)}
+              disabled={!isFiltered}
+              className="btn btn-ghost w-full py-2 text-[13px]"
+            >
+              Clear filters
+            </button>
+          </div>
         )}
+      </div>
+
+      <div className="mt-5 space-y-2.5">
+        {runs.data?.length === 0 &&
+          (isFiltered ? (
+            <EmptyState
+              icon={<HistoryIcon size={32} />}
+              title="No runs match"
+              hint="Try widening the date range or distance."
+            />
+          ) : (
+            <EmptyState
+              icon={<HistoryIcon size={32} />}
+              title="No runs yet"
+              hint="Head to the Record tab and claim your first turf."
+            />
+          ))}
         {runs.data?.map((r, i) => (
           <button
             key={r.id}

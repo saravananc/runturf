@@ -67,6 +67,21 @@ export interface RunSubmitInput {
   pausedMs?: number;
 }
 
+/** Sort keys for the run history list. */
+export type RunSort = 'date' | 'distance' | 'duration' | 'pace';
+
+/** Filter/sort options for `GET /runs`. All fields optional. */
+export interface RunQuery {
+  /** ISO date (YYYY-MM-DD) lower bound, inclusive. */
+  from?: string;
+  /** ISO date (YYYY-MM-DD) upper bound, inclusive (whole day). */
+  to?: string;
+  minDistanceM?: number;
+  maxDistanceM?: number;
+  sort?: RunSort;
+  order?: 'asc' | 'desc';
+}
+
 export interface RunSummary {
   id: string;
   startedAt: string;
