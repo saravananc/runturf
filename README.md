@@ -167,6 +167,20 @@ The image runs as a non-root user and exposes a `/health` endpoint (wired to a
 Docker `HEALTHCHECK`). Demo accounts (`demo`/`rival`, password `demo1234`) are
 **never** seeded when `NODE_ENV=production` unless `SEED_DEMO=true` is set.
 
+### Admin
+
+Site admins are users whose `users.role` is `admin` — there is no UI to grant it,
+by design. Promote someone directly in the database:
+
+```bash
+psql "$DATABASE_URL" -c "UPDATE users SET role='admin' WHERE username='<name>'"
+```
+
+The role is read per request, so it takes effect without re-logging-in. `/admin`
+routes (gated by `requireAdmin`) cover a site overview, forcing a territory decay
+sweep, and clearing a user's territory; the web app shows an **Admin** link on the
+profile only for admins.
+
 ## Scope
 
 Implemented: Foundation, Auth, GPS/Maps, Runs (+ GPX export), Territory, Challenges,

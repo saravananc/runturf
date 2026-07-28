@@ -32,8 +32,9 @@
 > | 15. Territory decay — turf fades if not revisited (14-day cutoff) + freshness fade | ✅ Done | `9d81fc6` |
 > | 16. Club battles — scheduled head-to-head turf wars (propose/accept, live score, winner + coin reward) | ✅ Done | `ba1d536` |
 > | 17. Social sharing (run share) + privacy settings (feed/discovery), enforced in feed & search | ✅ Done | `832eed7` |
+> | 18. Territory rules (steal protection on fresh turf) + admin tools; site-admin role now enforced | ✅ Done | `1269017` |
 >
-> **Test count: 55 → 243** (40 shared + 89 API + 29 web + 77 mobile jest + 8
+> **Test count: 55 → 247** (40 shared + 93 API + 29 web + 77 mobile jest + 8
 > Detox device). Mobile CI: typecheck, expo-doctor, jest, dual-platform bundle,
 > plus a separate `mobile-e2e` job running Detox on an emulator against a live API.
 > All 9 mobile screens and the API client have unit coverage; the app is also
@@ -67,8 +68,9 @@
 >   core flows on-device. Still mocked/unexercised even there: real GPS traces
 >   (permission is granted but no synthetic location is injected), the native
 >   document-picker UI for GPX import, and iOS (needs a macOS runner with Xcode).
-> - Global `users.role` (site admin) still unenforced — club-level roles
->   (owner/member) *are* enforced via `requireOwner` since `1d59aab`.
+> - ~~Global `users.role` (site admin) still unenforced~~ — **resolved (`18`)**:
+>   `requireAdmin` gates the `/admin` routes on `users.role`; club-level roles
+>   (owner/member) have been enforced via `requireOwner` since `1d59aab`.
 >
 > **Note on scope:** the backlog's 405 task names are placeholders (e.g. "Login Task 1"),
 > so "intended architecture" is inferred from the epic/feature names plus the agreed build
