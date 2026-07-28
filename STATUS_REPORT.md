@@ -34,9 +34,9 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | **07 Territory** | Capture engine, Grid (slippy-tile z18), Ownership (new/steal/retain), History (`cell_captures`), Rendering (viewport GeoJSON), Scoring (turf leaderboard), Conflict (decay — turf fades if not revisited `9d81fc6`), Rules (steal protection on fresh turf), Admin (overview, force decay, clear territory) |
 | **08 Clubs** | Clubs (create/join/leave), Chat, Members (ownership succession), Rankings, **Invites + Moderation (`1d59aab`)**, Battles (scheduled head-to-head turf wars), Events (meet-ups with RSVP) |
 | **09 Rewards** | Achievements (12), Levels, Streaks (+ freeze), XP, **Coins (accrual + shop spending `298e886`)** |
-| **10 QA/Release** | Testing (260 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`) |
+| **10 QA/Release** | Testing (266 tests: shared + API + web + mobile + Detox), Automation (CI + `mobile-e2e`), Docs (deploy README), Analytics (first-party events `3e3854f`), Performance (bundle splitting — initial JS 1090 → 223 kB), Accessibility (axe suite + reduced-motion) |
 
-**~65 of 81 features fully done.**
+**~67 of 81 features fully done.**
 
 ---
 
@@ -46,9 +46,10 @@ Features the assessment confirms as fully implemented (commit noted where given)
 |---|---|---|
 | **03 GPS/Maps** | Background tracking, Battery optimization, Geofence, Offline maps, Routes (saved/reusable) | High-weight epic (20 High tasks) |
 | **06 Challenges** | Events, Notifications, Push, Reminders | Mixed; needs custom dev-client |
-| **10 QA/Release** | Performance, Accessibility, Store (app-store release) | 20 High tasks concentrated here |
+| **10 QA/Release** | Store (app-store release) | 20 High tasks concentrated here |
 
-**~12 features unstarted**, concentrated in **03 (GPS depth), 06 (push/events), 10 (release breadth)**.
+**~10 features unstarted** — almost all of them gated on a custom Expo dev-client
+(**06** push/notifications, **03** background GPS) or store accounts (**10**).
 
 ---
 
@@ -57,6 +58,8 @@ Features the assessment confirms as fully implemented (commit noted where given)
 | Epic · Feature | Done | Missing |
 |---|---|---|
 | 10 · Crash reporting | Sentry on API + web, env-gated (`3e3854f`) | Mobile native `@sentry/react-native` (needs prebuild + Detox re-verify) |
+| 10 · Performance | Vendor/route splitting; initial JS 1090 → 223 kB; hot paths already incremental | No automated size budget, so a regression would not fail CI |
+| 10 · Accessibility | axe suite over pages + UI kit; reduced-motion honoured in CSS *and* JS | axe cannot check contrast under jsdom, nor judge focus order |
 | 02 · Settings | Privacy toggles (activity/discovery) in the profile | Broader account settings (email, password change, notifications) |
 | 03 · Location Sync | Batch point submission on run save | Live/background sync |
 | 07 · Sync | Viewport GeoJSON fetch/render | Full territory sync semantics |
@@ -80,7 +83,7 @@ Features the assessment confirms as fully implemented (commit noted where given)
 
 **Backlog features with no implementation yet:** all Pending items in §2
 (Background, Battery, Geofence, Offline, Routes, Events, Notifications, Push,
-Reminders, Performance, Accessibility, Store).
+Reminders, Store).
 
 **Deviation:** backlog specifies **Mapbox** (03); implementation uses
 **MapLibre/OSM** — functionally equivalent, different technology than planned.
@@ -127,21 +130,23 @@ a usable planning artifact.
 | 07 Territory | 9 + ½ (Sync) / 10 | 120 | **~95%** 🟢 |
 | 08 Clubs | 8 / 8 | 96 | **~100%** 🟢 |
 | 09 Rewards | 5 + ½ (Badges) / 6 | 72 | **~92%** 🟢 |
-| 10 QA/Release | 4 + 1½ (½ Security, ½ Release, ½ Crash) / 10 | 120 | **~55%** 🟡 |
+| 10 QA/Release | 6 + 1½ (½ Security, ½ Release, ½ Crash) / 10 | 120 | **~75%** 🟡 |
 
-**Overall (full 10-epic vision): ~83% complete** — feature-weighted. Recent work:
-crash-reporting + analytics (`3e3854f`) took Foundation to complete and QA/Release
-to ~55%; territory decay (`9d81fc6`) and then steal-protection + admin tools took
-Territory to ~95%; club battles and then events took Clubs to complete; social
-sharing + privacy took Social to complete; site-admin role enforcement took Auth
-to ~92%; run filters/search took Runs to complete.
+**Overall (full 10-epic vision): ~85% complete** — feature-weighted. Recent work:
+crash-reporting + analytics (`3e3854f`), then performance + accessibility, took
+Foundation to complete and QA/Release to ~75%; territory decay (`9d81fc6`) and
+then steal-protection + admin tools took Territory to ~95%; club battles and then
+events took Clubs to complete; social sharing + privacy took Social to complete;
+site-admin role enforcement took Auth to ~92%; run filters/search took Runs to
+complete.
 
 **Overall (MVP / prioritized roadmap): ~95%+ complete** — the assessment's header
 confirms the entire prioritized roadmap (auth → GPS run → territory capture →
 rewards → social → clubs → shop → deployment → tests → device E2E) is done. The
 core game loop works end-to-end on web and is verified on-device.
 
-**Where the remaining ~17% lives:** almost entirely in **deferred breadth** —
-mobile-platform features needing a custom dev-client (push, background GPS: epics
-03/06), GPS depth (offline, geofence, routes), and release-readiness (store, a11y,
-perf: epic 10). None block the current product; all are net-new.
+**Where the remaining ~15% lives:** entirely in **gated breadth**, not product
+decisions — mobile-platform features needing a custom Expo dev-client (push,
+notifications, reminders, background GPS: epics 03/06), GPS depth (offline maps,
+geofence, saved routes: epic 03), and the app-store release, which needs Apple /
+Google accounts (epic 10). Nothing buildable on the current stack remains open.
