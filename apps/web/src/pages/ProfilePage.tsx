@@ -119,6 +119,7 @@ export function ProfilePage() {
         <span className="text-ink-3">→</span>
       </Link>
 
+      <AdminLink />
       <PrivacySettings />
 
       <div className="mt-6">
@@ -201,6 +202,26 @@ function Toggle({
         />
       </button>
     </div>
+  );
+}
+
+function AdminLink() {
+  const { data } = useQuery({
+    queryKey: ['mySettings'],
+    queryFn: () => get<UserSettings>('/users/me/settings'),
+  });
+  if (data?.role !== 'admin') return null;
+  return (
+    <Link
+      to="/admin"
+      className="card mt-2.5 flex items-center gap-3 p-4 transition-colors hover:bg-elev2"
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-ember/15 text-ember">
+        🛡️
+      </span>
+      <span className="flex-1 text-[14px] font-bold text-ink">Admin</span>
+      <span className="text-ink-3">→</span>
+    </Link>
   );
 }
 

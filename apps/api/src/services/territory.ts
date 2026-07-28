@@ -1,4 +1,5 @@
 import {
+  CAPTURE_PROTECTION_MINUTES,
   cellsInBBox,
   cellsOnPath,
   cellToPolygon,
@@ -61,6 +62,8 @@ export interface CaptureResult {
   stolenCells: number;
   /** cells already owned by this runner that the route re-visited */
   retainedCells: number;
+  /** enemy cells the route crossed that were still within their steal-protection window */
+  protectedCells: number;
 }
 
 /**
@@ -74,7 +77,8 @@ export async function captureCells(
   path: LatLng[],
 ): Promise<CaptureResult> {
   const cells = cellsOnPath(path, TERRITORY_ZOOM);
-  if (cells.length === 0) return { newCells: 0, stolenCells: 0, retainedCells: 0 };
+  if (cells.length === 0)
+    return { newCells: 0, stolenCells: 0, retainedCells: 0, protectedCells: 0 };
 
   // Fetch current owners of exactly the touched cells. Matching the (x, y)
   // pairs as a tuple avoids the cartesian product that `x IN (…) AND y IN (…)`
@@ -85,7 +89,12 @@ export async function captureCells(
     sql`, `,
   );
   const existing = await tx
-    .select({ x: territoryCells.x, y: territoryCells.y, ownerId: territoryCells.ownerId })
+    .select({
+      x: territoryCells.x,
+      y: territoryCells.y,
+      ownerId: territoryCells.ownerId,
+      capturedAt: territoryCells.capturedAt,
+    })
     .from(territoryCells)
     .where(
       and(
@@ -93,49 +102,62 @@ export async function captureCells(
         sql`(${territoryCells.x}, ${territoryCells.y}) IN (${pairs})`,
       ),
     );
-  const ownerByKey = new Map(existing.map((c) => [`${c.x}:${c.y}`, c.ownerId]));
+  const cellByKey = new Map(existing.map((c) => [`${c.x}:${c.y}`, c]));
 
   const now = new Date();
-  const result: CaptureResult = { newCells: 0, stolenCells: 0, retainedCells: 0 };
+  // Enemy cells captured after this instant are still shielded from being stolen.
+  const protectedSince = new Date(now.getTime() - CAPTURE_PROTECTION_MINUTES * 60_000);
+  const result: CaptureResult = { newCells: 0, stolenCells: 0, retainedCells: 0, protectedCells: 0 };
   const captures: (typeof cellCaptures.$inferInsert)[] = [];
+  const skip = new Set<string>(); // protected cells: leave their current owner untouched
 
   for (const cell of cells) {
-    const prevOwner = ownerByKey.get(`${cell.x}:${cell.y}`);
-    if (prevOwner === userId) {
+    const key = `${cell.x}:${cell.y}`;
+    const prev = cellByKey.get(key);
+    if (prev?.ownerId === userId) {
       result.retainedCells++;
       continue; // ownership unchanged; the upsert below refreshes its freshness
     }
-    if (prevOwner === undefined) result.newCells++;
+    if (prev && prev.capturedAt > protectedSince) {
+      // Held by someone else and still inside its steal-protection window.
+      result.protectedCells++;
+      skip.add(key);
+      continue;
+    }
+    if (!prev) result.newCells++;
     else result.stolenCells++;
     captures.push({
       zoom: TERRITORY_ZOOM,
       x: cell.x,
       y: cell.y,
       newOwnerId: userId,
-      prevOwnerId: prevOwner ?? null,
+      prevOwnerId: prev?.ownerId ?? null,
       runId,
     });
   }
 
-  // Upsert *every* touched cell (cellsOnPath dedupes, so no key repeats). This
-  // claims new/stolen cells and — the point of decay — refreshes capturedAt on
-  // cells the runner already owned, so turf they keep running through never fades.
-  await tx
-    .insert(territoryCells)
-    .values(
-      cells.map((c) => ({
-        zoom: TERRITORY_ZOOM,
-        x: c.x,
-        y: c.y,
-        ownerId: userId,
-        capturedAt: now,
-        runId,
-      })),
-    )
-    .onConflictDoUpdate({
-      target: [territoryCells.zoom, territoryCells.x, territoryCells.y],
-      set: { ownerId: userId, capturedAt: now, runId },
-    });
+  // Upsert every touched cell except protected ones (cellsOnPath dedupes, so no
+  // key repeats). Claims new/stolen cells and — the point of decay — refreshes
+  // capturedAt on the runner's own cells so turf they keep running never fades.
+  const toUpsert = cells.filter((c) => !skip.has(`${c.x}:${c.y}`));
+  if (toUpsert.length > 0) {
+    await tx
+      .insert(territoryCells)
+      .values(
+        toUpsert.map((c) => ({
+          zoom: TERRITORY_ZOOM,
+          x: c.x,
+          y: c.y,
+          ownerId: userId,
+          capturedAt: now,
+          runId,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [territoryCells.zoom, territoryCells.x, territoryCells.y],
+        set: { ownerId: userId, capturedAt: now, runId },
+      });
+  }
 
   // History records ownership changes only, not freshness refreshes.
   if (captures.length > 0) await tx.insert(cellCaptures).values(captures);

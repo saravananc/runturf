@@ -6,6 +6,7 @@ import pinoHttp from 'pino-http';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { errorHandler } from './middleware.js';
+import { adminRouter } from './routes/admin.js';
 import { eventsRouter } from './routes/analytics.js';
 import { authRouter } from './routes/auth.js';
 import { clubsRouter } from './routes/clubs.js';
@@ -86,6 +87,7 @@ export function createApp() {
   app.use('/clubs', clubsRouter);
   app.use('/shop', shopRouter);
   app.use('/events', eventsRouter);
+  app.use('/admin', adminRouter);
 
   app.use(errorHandler);
   return app;

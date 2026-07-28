@@ -1,4 +1,4 @@
-import { TERRITORY_DECAY_DAYS } from '@runturf/shared';
+import { CAPTURE_PROTECTION_MINUTES, TERRITORY_DECAY_DAYS } from '@runturf/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
@@ -141,7 +141,9 @@ export function MapScreen() {
       <View style={s.banner} pointerEvents="none">
         <Text style={s.bannerTitle}>Territory map</Text>
         <Text style={s.bannerHint}>Run through a cell to claim it</Text>
-        <Text style={s.bannerNote}>Turf fades after {TERRITORY_DECAY_DAYS} days — run it to defend it</Text>
+        <Text style={s.bannerNote}>
+          Protected {CAPTURE_PROTECTION_MINUTES} min · fades after {TERRITORY_DECAY_DAYS} days
+        </Text>
       </View>
     </View>
   );

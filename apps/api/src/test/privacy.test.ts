@@ -59,14 +59,14 @@ describe('privacy', () => {
     const u = await makeUser('settings');
     const before = await request(app).get('/users/me/settings').set(auth(u.token));
     expect(before.status).toBe(200);
-    expect(before.body).toEqual({ shareActivity: true, discoverable: true });
+    expect(before.body).toEqual({ shareActivity: true, discoverable: true, role: 'user' });
 
     await request(app)
       .patch('/users/me')
       .set(auth(u.token))
       .send({ shareActivity: false, discoverable: false });
     const after = await request(app).get('/users/me/settings').set(auth(u.token));
-    expect(after.body).toEqual({ shareActivity: false, discoverable: false });
+    expect(after.body).toEqual({ shareActivity: false, discoverable: false, role: 'user' });
   });
 
   it('hides non-discoverable users from search', async () => {

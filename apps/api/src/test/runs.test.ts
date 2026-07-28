@@ -134,6 +134,12 @@ describe('run submission pipeline', () => {
   });
 
   it('lets a rival steal overlapping cells', async () => {
+    // Turf is steal-protected for its first 30 min; age Alice's past that window.
+    await pool.query(
+      `UPDATE territory_cells SET captured_at = now() - interval '2 hours'
+       WHERE owner_id = (SELECT id FROM users WHERE username = $1)`,
+      [`t_${tag}_alice`],
+    );
     const res = await request(app)
       .post('/runs')
       .set('Authorization', `Bearer ${bob}`)

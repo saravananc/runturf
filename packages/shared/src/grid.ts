@@ -12,6 +12,13 @@ export const TERRITORY_ZOOM = 18;
  */
 export const TERRITORY_DECAY_DAYS = 14;
 
+/**
+ * Steal protection: a cell captured within this many minutes cannot be stolen by
+ * another runner. Fresh turf gets a grace period, so a capture isn't instantly
+ * undone by whoever runs the same street next.
+ */
+export const CAPTURE_PROTECTION_MINUTES = 30;
+
 export interface Cell {
   x: number;
   y: number;

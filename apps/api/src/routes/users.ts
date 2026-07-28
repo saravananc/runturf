@@ -38,7 +38,11 @@ usersRouter.get(
   h(async (req, res) => {
     const user = await db.query.users.findFirst({ where: eq(users.id, req.userId) });
     if (!user) throw notFound('User not found');
-    res.json({ shareActivity: user.shareActivity, discoverable: user.discoverable });
+    res.json({
+      shareActivity: user.shareActivity,
+      discoverable: user.discoverable,
+      role: user.role,
+    });
   }),
 );
 
