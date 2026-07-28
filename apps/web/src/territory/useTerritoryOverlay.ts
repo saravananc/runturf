@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
+// Type-only: keeps the 780 kB maplibre bundle out of this module's import graph,
+// so it loads when a map actually mounts rather than on first paint.
+import type maplibregl from 'maplibre-gl';
 import { get } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 

@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import type maplibregl from 'maplibre-gl';
 import { useEffect, useRef } from 'react';
 
 export const OSM_STYLE: maplibregl.StyleSpecification = {
@@ -22,29 +22,45 @@ export interface MapViewProps {
   className?: string;
 }
 
-/** Thin MapLibre wrapper: mounts a map, hands the instance to `onMap`. */
+/**
+ * Thin MapLibre wrapper: mounts a map, hands the instance to `onMap`.
+ *
+ * MapLibre (~780 kB) is imported dynamically rather than at module scope, so the
+ * app shell paints before the map engine has downloaded. (Its stylesheet stays in
+ * styles.css — it is small and shared.)
+ */
 export function MapView({ center = [80.2824, 13.0475], zoom = 15, onMap, className }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onMapRef = useRef(onMap);
   onMapRef.current = onMap;
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: OSM_STYLE,
-      center,
-      zoom,
-      attributionControl: { compact: true },
-    });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    let map: maplibregl.Map | undefined;
     let cleanup: void | (() => void);
-    map.on('load', () => {
-      cleanup = onMapRef.current?.(map);
-    });
+    // The component can unmount while the chunk is still in flight.
+    let cancelled = false;
+
+    (async () => {
+      const { default: maplibre } = await import('maplibre-gl');
+      if (cancelled || !containerRef.current) return;
+
+      map = new maplibre.Map({
+        container: containerRef.current,
+        style: OSM_STYLE,
+        center,
+        zoom,
+        attributionControl: { compact: true },
+      });
+      map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+      map.on('load', () => {
+        cleanup = onMapRef.current?.(map!);
+      });
+    })();
+
     return () => {
+      cancelled = true;
       cleanup?.();
-      map.remove();
+      map?.remove();
     };
     // center/zoom are initial values only; the map manages its own camera after mount
   }, []);

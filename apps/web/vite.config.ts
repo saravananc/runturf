@@ -27,6 +27,20 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the big, rarely-changing dependencies into their own chunks.
+        // maplibre alone is most of the bundle; keeping it separate means an app
+        // change no longer invalidates it in users' caches.
+        manualChunks: {
+          maplibre: ['maplibre-gl'],
+          sentry: ['@sentry/react'],
+          react: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

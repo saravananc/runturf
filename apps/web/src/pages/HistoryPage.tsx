@@ -88,6 +88,7 @@ export function HistoryPage() {
         <input
           ref={fileRef}
           type="file"
+          aria-label="Import a GPX file"
           accept=".gpx,application/gpx+xml,application/xml,text/xml"
           className="hidden"
           onChange={(e) => {
