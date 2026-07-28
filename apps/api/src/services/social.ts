@@ -11,6 +11,7 @@ export async function searchUsers(userId: string, q: string): Promise<UserPublic
   const rows = await db.query.users.findMany({
     where: and(
       ne(users.id, userId),
+      eq(users.discoverable, true), // users who opted out of discovery stay hidden
       or(ilike(users.username, `%${term}%`), ilike(users.displayName, `%${term}%`)),
     ),
     limit: 10,
@@ -140,7 +141,8 @@ export async function getFeed(userId: string): Promise<FeedItem[]> {
     .select({ run: runs, user: users })
     .from(runs)
     .innerJoin(users, eq(users.id, runs.userId))
-    .where(inArray(runs.userId, ids))
+    // Always show your own runs; a friend's only if they share their activity.
+    .where(and(inArray(runs.userId, ids), or(eq(runs.userId, userId), eq(users.shareActivity, true))))
     .orderBy(desc(runs.startedAt))
     .limit(50);
   return rows.map((r) => ({

@@ -1,6 +1,12 @@
-import { USER_COLORS, type AchievementDef, type UnlockedAchievement, type UserStats } from '@runturf/shared';
+import {
+  USER_COLORS,
+  type AchievementDef,
+  type UnlockedAchievement,
+  type UserSettings,
+  type UserStats,
+} from '@runturf/shared';
 import { useFocusEffect, type NavigationProp } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -8,6 +14,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -158,6 +165,8 @@ export function ProfileScreen({ navigation }: { navigation: NavigationProp<never
         <Text style={s.linkArrow}>→</Text>
       </Card>
 
+      <PrivacyToggles />
+
       <View style={{ marginTop: space(6) }}>
         <SectionHeading
           action={
@@ -193,6 +202,83 @@ export function ProfileScreen({ navigation }: { navigation: NavigationProp<never
         />
       )}
     </ScrollView>
+  );
+}
+
+function SettingRow({
+  label,
+  hint,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  hint: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={s.settingRow}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.settingLabel}>{label}</Text>
+        <Text style={s.settingHint}>{hint}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        trackColor={{ true: colors.volt, false: colors.elev2 }}
+        thumbColor={colors.ink}
+      />
+    </View>
+  );
+}
+
+function PrivacyToggles() {
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    get<UserSettings>('/users/me/settings')
+      .then(setSettings)
+      .catch(() => {});
+  }, []);
+
+  async function toggle(p: Partial<UserSettings>) {
+    if (!settings) return;
+    const prev = settings;
+    setSettings({ ...prev, ...p }); // optimistic
+    setBusy(true);
+    try {
+      await patch('/users/me', p);
+    } catch {
+      setSettings(prev); // roll back
+      Alert.alert('Could not update', 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!settings) return null;
+  return (
+    <Card style={{ marginTop: space(2.5) }}>
+      <SectionHeading>Privacy</SectionHeading>
+      <SettingRow
+        label="Share activity"
+        hint="Show your runs in friends' feeds"
+        value={settings.shareActivity}
+        disabled={busy}
+        onChange={(v) => toggle({ shareActivity: v })}
+      />
+      <SettingRow
+        label="Discoverable"
+        hint="Let other runners find you in search"
+        value={settings.discoverable}
+        disabled={busy}
+        onChange={(v) => toggle({ discoverable: v })}
+      />
+    </Card>
   );
 }
 
@@ -300,6 +386,14 @@ const s = StyleSheet.create({
   linkText: { fontFamily: font.bold, fontSize: type.small, color: colors.ink, flex: 1 },
   linkCoins: { fontFamily: font.bold, fontSize: type.small, color: colors.gold, marginRight: space(2) },
   linkArrow: { color: colors.ink3, fontSize: 16 },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    paddingVertical: space(2),
+  },
+  settingLabel: { fontFamily: font.bold, fontSize: type.small, color: colors.ink },
+  settingHint: { fontFamily: font.regular, fontSize: type.caption, color: colors.ink3 },
   badgeCount: { fontFamily: font.semibold, fontSize: type.caption, color: colors.ink3 },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2.5) },
   badge: {

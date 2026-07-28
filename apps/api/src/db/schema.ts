@@ -19,6 +19,9 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   color: text('color').notNull().default('#22c55e'),
   role: text('role').notNull().default('user'),
+  // Privacy: include my runs in friends' feeds, and appear in user search.
+  shareActivity: boolean('share_activity').notNull().default(true),
+  discoverable: boolean('discoverable').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

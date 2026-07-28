@@ -18,6 +18,8 @@ const ProfilePatch = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
+  shareActivity: z.boolean().optional(),
+  discoverable: z.boolean().optional(),
 });
 
 usersRouter.patch(
@@ -27,6 +29,16 @@ usersRouter.patch(
     const [user] = await db.update(users).set(patch).where(eq(users.id, req.userId)).returning();
     if (!user) throw notFound('User not found');
     res.json(toPublic(user));
+  }),
+);
+
+/** The signed-in user's own privacy settings (not exposed for other users). */
+usersRouter.get(
+  '/me/settings',
+  h(async (req, res) => {
+    const user = await db.query.users.findFirst({ where: eq(users.id, req.userId) });
+    if (!user) throw notFound('User not found');
+    res.json({ shareActivity: user.shareActivity, discoverable: user.discoverable });
   }),
 );
 

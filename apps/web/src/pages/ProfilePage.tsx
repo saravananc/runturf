@@ -1,10 +1,15 @@
-import type { AchievementDef, UnlockedAchievement, UserStats } from '@runturf/shared';
+import type {
+  AchievementDef,
+  UnlockedAchievement,
+  UserSettings,
+  UserStats,
+} from '@runturf/shared';
 import { levelProgress } from '@runturf/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EditProfileModal } from '../components/EditProfileModal';
-import { get } from '../api/client';
+import { get, patch } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { CoinIcon, FlagIcon, FlameIcon, MapIcon, RouteIcon, TargetIcon } from '../components/icons';
 import { Avatar, ProgressRing, SectionHeading, StatTile } from '../components/ui';
@@ -114,6 +119,8 @@ export function ProfilePage() {
         <span className="text-ink-3">→</span>
       </Link>
 
+      <PrivacySettings />
+
       <div className="mt-6">
         <SectionHeading
           action={
@@ -155,5 +162,87 @@ export function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Toggle({
+  label,
+  hint,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="min-w-0 flex-1">
+        <div className="text-[14px] font-bold text-ink">{label}</div>
+        <div className="text-[12px] text-ink-3">{hint}</div>
+      </div>
+      <button
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
+          checked ? 'bg-volt' : 'bg-elev2'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-5' : 'translate-x-0.5'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function PrivacySettings() {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ['mySettings'],
+    queryFn: () => get<UserSettings>('/users/me/settings'),
+  });
+  const update = useMutation({
+    mutationFn: (p: Partial<UserSettings>) => patch('/users/me', p),
+    // Optimistic: flip the toggle immediately, roll back on failure.
+    onMutate: async (p) => {
+      await qc.cancelQueries({ queryKey: ['mySettings'] });
+      const prev = qc.getQueryData<UserSettings>(['mySettings']);
+      if (prev) qc.setQueryData(['mySettings'], { ...prev, ...p });
+      return { prev };
+    },
+    onError: (_e, _p, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['mySettings'], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['mySettings'] }),
+  });
+
+  if (!data) return null;
+  return (
+    <section className="card mt-2.5 p-4">
+      <SectionHeading>Privacy</SectionHeading>
+      <Toggle
+        label="Share activity"
+        hint="Show your runs in friends' feeds"
+        checked={data.shareActivity}
+        disabled={update.isPending}
+        onChange={(v) => update.mutate({ shareActivity: v })}
+      />
+      <Toggle
+        label="Discoverable"
+        hint="Let other runners find you in search"
+        checked={data.discoverable}
+        disabled={update.isPending}
+        onChange={(v) => update.mutate({ discoverable: v })}
+      />
+    </section>
   );
 }

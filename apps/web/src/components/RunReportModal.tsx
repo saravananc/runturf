@@ -1,10 +1,34 @@
 import { levelProgress, type RunReport } from '@runturf/shared';
+import { useState } from 'react';
 import { formatDistance, formatDuration, formatPace } from '../record/recorder';
 import { CoinIcon, FlagIcon, FlameIcon, SwordsIcon } from './icons';
 import { CountUp, ProgressRing } from './ui';
 
+/** A short, shareable one-liner for a finished run. */
+export function runShareText(report: RunReport): string {
+  const { cellsCaptured } = report.run;
+  const cells = `${cellsCaptured} ${cellsCaptured === 1 ? 'cell' : 'cells'}`;
+  return `I ran ${formatDistance(report.run.distanceM)} and captured ${cells} on RunTurf! 🏃⚡`;
+}
+
 export function RunReportModal({ report, onClose }: { report: RunReport; onClose: () => void }) {
   const { run, stats } = report;
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    const text = runShareText(report);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'RunTurf', text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // User dismissed the share sheet, or the API is unavailable — ignore.
+    }
+  }
   // fixed, not absolute: this modal opens from both Record and History, so it
   // must overlay the viewport rather than a positioned ancestor.
   return (
@@ -107,9 +131,14 @@ export function RunReportModal({ report, onClose }: { report: RunReport; onClose
           </div>
         )}
 
-        <button onClick={onClose} className="btn btn-primary mt-6 w-full py-3">
-          Nice!
-        </button>
+        <div className="mt-6 flex gap-2">
+          <button onClick={share} className="btn btn-ghost flex-1 py-3">
+            {copied ? 'Copied!' : 'Share'}
+          </button>
+          <button onClick={onClose} className="btn btn-primary flex-1 py-3">
+            Nice!
+          </button>
+        </div>
       </div>
     </div>
   );

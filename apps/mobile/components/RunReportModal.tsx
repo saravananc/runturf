@@ -1,5 +1,5 @@
 import type { RunReport } from '@runturf/shared';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { formatDistance, formatDuration, formatPace } from '../format';
 import { colors, font, radius, space, type } from '../theme';
 import { Btn, Label } from './ui';
@@ -12,6 +12,18 @@ export function RunReportModal({
   onClose: () => void;
 }) {
   const { run, stats } = report;
+
+  async function shareRun() {
+    const cells = run.cellsCaptured;
+    const text = `I ran ${formatDistance(run.distanceM)} and captured ${cells} ${
+      cells === 1 ? 'cell' : 'cells'
+    } on RunTurf! 🏃⚡`;
+    try {
+      await Share.share({ message: text });
+    } catch {
+      // Share sheet dismissed — nothing to do.
+    }
+  }
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View style={s.backdrop}>
@@ -56,7 +68,10 @@ export function RunReportModal({
               </View>
             ))}
 
-            <Btn label="Nice!" onPress={onClose} style={{ marginTop: space(5) }} />
+            <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(5) }}>
+              <Btn label="Share" variant="ghost" onPress={shareRun} style={{ flex: 1 }} />
+              <Btn label="Nice!" onPress={onClose} style={{ flex: 1 }} />
+            </View>
           </ScrollView>
         </View>
       </View>

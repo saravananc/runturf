@@ -42,6 +42,14 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+/** A user's own privacy settings (never exposed for other users). */
+export interface UserSettings {
+  /** Include my runs in friends' activity feeds. */
+  shareActivity: boolean;
+  /** Appear in user search. */
+  discoverable: boolean;
+}
+
 export interface RunPointInput {
   lat: number;
   lng: number;
