@@ -80,6 +80,11 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
+    # The API parses these at boot (zod), and the seed imports the same config,
+    # so they must be set for every step that touches it — not just the server.
+    env:
+      DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
+      JWT_SECRET: ci-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,17 +97,12 @@ jobs:
 
       # The device talks to a real API, so bring the stack up first.
       - run: npm ci
-      - run: npm run db:push
-        env:
-          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
+      - run: npm run db:migrate
       - run: npm run db:seed
         env:
-          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
           SEED_DEMO: 'true' # e2e signs in as the demo account
       - name: Start API
         run: npm run dev --workspace apps/api &
-        env:
-          DATABASE_URL: postgres://runturf:runturf@localhost:5432/runturf
       - name: Wait for API
         run: npx wait-on http://localhost:4000/health --timeout 60000
 
