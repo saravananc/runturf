@@ -1,0 +1,19 @@
+name: Backend health monitor
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '10 * * * *'
+permissions:
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/backend-monitor.mjs
+# Enable Actions failure notifications for the operator's GitHub account.
+# Hourly checks limit free Actions-minute and Edge invocation usage.
